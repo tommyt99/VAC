@@ -1,0 +1,9 @@
+﻿  MorseCodeDecoder.cpp
+c:\users\tommy\desktop\vac\vac\morse code decoder\morse code decoder\morsecodedecoder.cpp(28): error C2440: 'return': cannot convert from 'char' to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>'
+  c:\users\tommy\desktop\vac\vac\morse code decoder\morse code decoder\morsecodedecoder.cpp(28): note: No constructor could take the source type, or constructor overload resolution was ambiguous
+c:\users\tommy\desktop\vac\vac\morse code decoder\morse code decoder\morsecodedecoder.cpp(42): warning C4018: '<': signed/unsigned mismatch
+c:\users\tommy\desktop\vac\vac\morse code decoder\morse code decoder\morsecodedecoder.cpp(44): error C2664: 'std::string translator(std::string,int)': cannot convert argument 1 from 'char' to 'std::string'
+  c:\users\tommy\desktop\vac\vac\morse code decoder\morse code decoder\morsecodedecoder.cpp(44): note: No constructor could take the source type, or constructor overload resolution was ambiguous
+c:\users\tommy\desktop\vac\vac\morse code decoder\morse code decoder\morsecodedecoder.cpp(64): error C2228: left of '.length' must have class/struct/union
+  c:\users\tommy\desktop\vac\vac\morse code decoder\morse code decoder\morsecodedecoder.cpp(64): note: type is 'std::string [1]'
+c:\users\tommy\desktop\vac\vac\morse code decoder\morse code decoder\morsecodedecoder.cpp(8): fatal error C1075: '{': no matching token found

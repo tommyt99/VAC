@@ -1,0 +1,27 @@
+clear;
+clc;
+close all;
+
+a = 1; %This can change depending on situation.h = 0.01;
+h = 0.01;
+x = [0:h:pi]; 
+y = cos(x);
+plot(x,y); 
+title('cos(x)');
+
+ui = 1;
+
+% Implicit
+for i = 1:length(x) 
+u1 = ui + h*cos(i);
+
+
+end
+
+for i = 1+h:h:pi
+% explicit
+u_np1 = ui + h*cos(i);
+end
+
+fprintf('Implicit: %d \n', u1)
+fprintf('Explicit: %d', u_np1)
