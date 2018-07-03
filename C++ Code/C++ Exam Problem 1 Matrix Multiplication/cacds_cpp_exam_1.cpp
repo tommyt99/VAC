@@ -1,16 +1,17 @@
-//REPLACE ANY ?? FOR APPROPRIATE CODE
-
+// Matrix Multiplication
 #include <iostream>
 using namespace std;
 
 int main()
 {
-    int a[10][10], b[10][10], mult[10][10], r1, c1, r2, c2, i, j, k;
+   int  r1, c1, r2, c2, i, j, k;
 
     cout << "Enter rows and columns for first matrix: ";
     cin >> r1 >> c1;
     cout << "Enter rows and columns for second matrix: ";
     cin >> r2 >> c2;
+
+	int a[r1][c1], b[r2][c2], mult[r1][c2];
 
     // If column of first matrix in not equal to row of second matrix,
     // ask the user to enter the size of matrix again.

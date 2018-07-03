@@ -1,2 +1,26 @@
 
 Project1/.vs/Project1/v15/Browse.VC.db
+*.log
+
+*.db
+*.ilk
+*.pdb
+*.tlog
+*.ipch
+*.vcxproj
+*.filters
+*.user
+*.obj
+*.enc
+*.idb
+*.exe
+*.ilk
+*.tlog
+*.zip
+*.txt
+C++ Code/Rounding Function Financial App/.vs/Rounding Function Financial App/v15/.suo
+Numerical Methods/Implicit and Explicit Integration/Implicit and Explicition MATLAB Code.docx
+Numerical Methods/Implicit and Explicit Integration/Implicit and Explicit Integration MATLAB.m
+Numerical Methods/Implicit and Explicit Integration/Implicit and Explicit Integration MATLAB.asv
+Numerical Methods/Adaptive Integration/.vs/Adaptive Integration/v15/.suo
+*.sln
