@@ -49,6 +49,7 @@ int main()
             mult[i][j]=0;
         }
 
+		//ijk
     // Multiplying matrix a and b and storing in array mult.
     for(i = 0; i < r1; ++i)
         for(j = 0; j < c2; ++j)
@@ -56,6 +57,27 @@ int main()
             {
                 mult[i][j] += a[i][k] * b[k][j];
             }
+	//jik
+	for( j=0;j<n;j++)
+		for (i=0;i<n;++i)
+			for (k=0;j<n;++j){
+			mult[i][j] += a[i][k] * b[k][j];
+		}
+
+	//kij - efficient
+	for (k=0; k<n;++k)
+		for (i=0;i<n;i++)
+			for(j=0;j<n;j++){
+			mult[i][j] += a[i][k] * b[k][j];
+		}
+
+	//ikj - efficient
+	for (i=0;i<n;++i)
+		for (k=0;k<n;k++)
+			for (j=0;j<n;j++){
+			mult[i][j] += a[i][k] * b[k][j];
+		}
+
 
     // Displaying the multiplication of two matrix.
     cout << endl << "Output Matrix: " << endl;
@@ -79,48 +101,33 @@ int main()
 #include <ctime>
 using namespace std;
 
-int main()
-{ // nxn matrix, sxs blocks 
+int main(){ 
+	// nxn matrix, sxs blocks 
 	//int  r1, c1, r2, c2;
 		int i, j, k;
-	int s = 1; //Block size
-	const int n = 2; 
-	int N = n/s; // n/s
+	int s = 2; //Block size
+	const int N = 20; 
+	int n = 20; 
 	double temp=0; 
 	time_t tstart, tend; 
-	/*cout << "Enter rows and columns for first matrix: ";
-	cin >> r1 >> c1;
-	cout << "Enter rows and columns for second matrix: ";
-	cin >> r2 >> c2;*/
-
-	int a[n][n], b[n][n], mult[n][n];
-
-	// If column of first matrix in not equal to row of second matrix,
-	// ask the user to enter the size of matrix again.
-	/*while (c1 != r2)
-	{
-		cout << "Enter rows and columns for first matrix: ";
-		cin >> r1 >> c1;
-		cout << "Enter rows and columns for second matrix: ";
-		cin >> r2 >> c2;
-	}*/
+	int a[N][N], b[N][N], mult[N][N];
 
 	// Storing elements of first matrix.
-	cout << endl << "Enter elements of matrix 1:" << endl;
+	
 	for (i = 0; i < n; ++i)
 		for (j = 0; j < n; ++j)
 		{
-			cout << "Enter element a" << i + 1 << j + 1 << " : ";
-			cin >> a[i][j];
+			//cout << "Enter element a" << i + 1 << j + 1 << " : ";
+			a[i][j] = 1; 
 		}
 
 	// Storing elements of second matrix.
-	cout << endl << "Enter elements of matrix 2:" << endl;
+	
 	for (i = 0; i < n; ++i)
 		for (j = 0; j < n; ++j)
 		{
-			cout << "Enter element b" << i + 1 << j + 1 << " : ";
-			cin >> b[i][j];
+			//cout << "Enter element b" << i + 1 << j + 1 << " : ";
+			b[i][j] = 2; 
 		}
 
 	// Initializing elements of matrix mult to 0.
@@ -132,6 +139,7 @@ int main()
 
 	tstart = time(0);
 	// Block Multiplication
+
 	for (int jj = 0; jj<N; jj += s) {
 		for (int kk = 0; kk<N; kk += s) {
 			for (int i = 0; i<N; i++) {
@@ -145,11 +153,13 @@ int main()
 			}
 		}
 	}
+
+	
 	tend = time(0);
 	cout << "It took " << difftime(tend, tstart) << " second(s)." << endl;
 
-	// Displaying the multiplication of two matrix.
-	cout << endl << "Output Matrix: " << endl;
+	// displaying the multiplication of two matrix.
+	cout << endl << "output matrix: " << endl;
 	for (i = 0; i < n; ++i)
 		for (j = 0; j < n; ++j)
 		{
