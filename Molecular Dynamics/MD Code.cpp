@@ -12,9 +12,10 @@ double v[npart][3], f[npart][3];
 double sumv[3];
 double sumv2; 
 const double temp = 1; //What should this be set at? 
-const double dt = 0.01;  //What should this be set at? 
-const int box = 6; 
-double xr[3]; 
+const double dt = 0.001;  //Spit out a file of xyz values every 200 
+const double box = 6; 
+double xr[3];
+double en = 0;
 
 int lattice_x(int i) {
 	int x = i / (n*n);
@@ -69,7 +70,7 @@ void init() {
 }
 
 void force() {
-	double en = 0;
+	
 	for (int i = 0; i < npart; i++) {
 		f[i][0] = 0;
 		f[i][1] = 0;
@@ -79,32 +80,25 @@ void force() {
 	for (int i = 0; i < npart-1; i++) 
 		for (int j = i+1; j < npart; j++) {
 			double xr = x[i][0] - x[j][0];
+			xr = xr - box * round(xr / box); 
 			double yr = x[i][1] - x[j][1];
-			double zr = x[i][2] - x[j][2]; 
-			xr = xr - box * round(xr/ box); 
 			yr = yr - box * round(yr / box);
+			double zr = x[i][2] - x[j][2]; 
 			zr = zr - box * round(zr / box);
-			double x_r2 = xr * xr; 
-			double y_r2 = yr * yr;
-			double z_r2 = zr * zr; 
-			if (x_r2 < 4 || y_r2 < 4 || z_r2 < 4) {
-				double x_r2i = 1 / x_r2;
-				double x_r6i = x_r2i * x_r2i * x_r2i;
-				double ff_x = 48 * x_r2i*x_r6i*(x_r6i - 0.5);
-				double y_r2i = 1 / y_r2;
-				double y_r6i = y_r2i * y_r2i*y_r2i;
-				double ff_y = 48 * y_r2i * y_r6i*(y_r6i - 0.5); 
-				double z_r2i = 1 / z_r2; 
-				double z_r6i = z_r2i * z_r2i*z_r2i;
-				double ff_z = 48 * z_r2i * z_r6i*(z_r6i - 0.5);
-				f[i][0] = f[i][0] + ff_x * xr;
-				f[j][0] = f[j][0] - ff_x * xr;
-				f[i][1] = f[i][1] + ff_y * yr; 
-				f[j][1] = f[j][1] - ff_y * yr;
-				f[i][2] = f[i][2] + ff_z * zr; 
-				f[j][2] = f[j][2] - ff_z * zr; 
-				double r6i = x_r6i * x_r6i + y_r6i * y_r6i + z_r6i * z_r6i; 
-				en = en + 4 * r6i * (r6i - 1) - ecut; 
+			double r2 = xr * xr + yr * yr + zr * zr; 
+			if (r2 < box/2) { 
+				double r2i = 1 / r2;
+				double r6i = pow(r2i, 3);
+				double ff = 48 * r2i*r6i*(r6i - 0.5);
+			
+				f[i][0] += ff * xr;
+				f[j][0] -= ff * xr;
+				f[i][1] += ff * yr; 
+				f[j][1] -= ff * yr;
+				f[i][2] += ff * zr; 
+				f[j][2] -= ff * zr; 
+				
+				en = en + 4 * r6i * (r6i - 1)- ecut; // what is rc?  
 			}
 
 
@@ -115,16 +109,28 @@ void force() {
 
 
 
-void integrate(f,en) {
-	sumv = 0;
+void integrate() {
+	sumv[0] = 0;
+	sumv[1] = 0;
+	sumv[2] = 0;
 	sumv2 = 0;
 	for (int i = 0; i < npart; i++) {
-		double xx = 2 * x[i] - xm[i] + delt * delt*f[i];
-		vi = (xx - xm[i]) / (2 * delt);
-		sumv = sumv + vi;
-		sumv2 = sumv2 + vi * vi; 
-		xm[i] = x[i];
-		x[i] = xx;
+		double xx = 2 * x[i][0] - xm[i][0] + dt*dt*f[i][0];
+		double vx = (xx - xm[i][0]) / (2 * dt);
+		sumv[0] += vx;
+		double yy = 2 * x[i][1] - xm[i][1] + dt * dt*f[i][1]; 
+		double vy = (yy - xm[i][1]) / (2 * dt);
+		sumv[1] += vy;
+		double zz = 2 * x[i][2] - xm[i][2] + dt * dt*f[i][2]; 
+		double vz = (zz - xm[i][2]) / (2 * dt);
+		sumv[2] += vz; 
+		sumv2 += vx * vx + vy * vy + vz * vz; 
+		xm[i][0] = x[i][0];
+		x[i][0] = xx;
+		xm[i][1] = x[i][1];
+		x[i][1] = yy;
+		xm[i][2] = x[i][2]; 
+		x[i][2] = zz; 
 	}
 	double temp = sumv2 / (3 * npart); 
 	double etot = (en + 0.5*sumv2) / npart;
@@ -139,9 +145,9 @@ int main() {
 	int tmax = 10; 
 	while (t<tmax) {
 		force();
-		/*integrate();
+		integrate();
 		t = t + dt;
-		sample();*/
+		//sample();
 	}
 
 
