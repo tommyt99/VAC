@@ -86,7 +86,8 @@ void force() {
 			double zr = x[i][2] - x[j][2]; 
 			zr = zr - box * round(zr / box);
 			double r2 = xr * xr + yr * yr + zr * zr; 
-			if (r2 < box/2) { 
+			double rc = box / 2; 
+			if (r2 < rc) { 
 				double r2i = 1 / r2;
 				double r6i = pow(r2i, 3);
 				double ff = 48 * r2i*r6i*(r6i - 0.5);
@@ -97,8 +98,11 @@ void force() {
 				f[j][1] -= ff * yr;
 				f[i][2] += ff * zr; 
 				f[j][2] -= ff * zr; 
-				
-				en = en + 4 * r6i * (r6i - 1)- ecut; // what is rc?  
+
+				double r6c = pow(1 / rc, 6);
+				double r12c = pow(r6c, 2);
+				double ecut = 4 * (r12c - r6c); 
+				en = en + 4 * r6i * (r6i - 1)- ecut; 
 			}
 
 

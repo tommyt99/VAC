@@ -25,3 +25,4 @@ Numerical Methods/Implicit and Explicit Integration/Implicit and Explicit Integr
 Numerical Methods/Adaptive Integration/.vs/Adaptive Integration/v15/.suo
 *.sln
 Random Compiler/.vs/Random/v15/.suo
+*.opendb
