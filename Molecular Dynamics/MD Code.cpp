@@ -2,20 +2,25 @@
 #include <cmath>
 #include <ctime>
 #include <time.h>
+#include <fstream>
+
 using namespace std;
 
 const int tmax = 10; 
-const int npart = 125; 
-const int n = cbrt(npart); 
-int x[npart][3], xm[npart][3];
+const int n = 5;
+const int npart = n*n*n; 
+double x[npart][3], xm[npart][3];
 double v[npart][3], f[npart][3]; 
 double sumv[3];
 double sumv2; 
-const double temp = 1; //What should this be set at? 
-const double dt = 0.001;  //Spit out a file of xyz values every 200 
+double temp =1 ; 
+const double dt = 0.001; 
 const double box = 6; 
 double xr[3];
-double en = 0;
+double en;
+double etot; 
+double ecut;
+double rc = box / 2;
 
 int lattice_x(int i) {
 	int x = i / (n*n);
@@ -70,7 +75,8 @@ void init() {
 }
 
 void force() {
-	
+	en = 0; 
+	double xr, yr, zr, r2, r2i, r6i, ff;
 	for (int i = 0; i < npart; i++) {
 		f[i][0] = 0;
 		f[i][1] = 0;
@@ -79,18 +85,18 @@ void force() {
 
 	for (int i = 0; i < npart-1; i++) 
 		for (int j = i+1; j < npart; j++) {
-			double xr = x[i][0] - x[j][0];
+			xr = x[i][0] - x[j][0];
 			xr = xr - box * round(xr / box); 
-			double yr = x[i][1] - x[j][1];
+			yr = x[i][1] - x[j][1];
 			yr = yr - box * round(yr / box);
-			double zr = x[i][2] - x[j][2]; 
+			zr = x[i][2] - x[j][2]; 
 			zr = zr - box * round(zr / box);
-			double r2 = xr * xr + yr * yr + zr * zr; 
-			double rc = box / 2; 
-			if (r2 < rc) { 
-				double r2i = 1 / r2;
-				double r6i = pow(r2i, 3);
-				double ff = 48 * r2i*r6i*(r6i - 0.5);
+			r2 = xr*xr + yr*yr + zr*zr; 
+			 
+			if (r2 < rc*rc) { 
+				r2i = 1 / r2;
+				r6i = pow(r2i, 3);
+				ff = 48 * r2i*r6i*(r6i - 0.5);
 			
 				f[i][0] += ff * xr;
 				f[j][0] -= ff * xr;
@@ -99,16 +105,10 @@ void force() {
 				f[i][2] += ff * zr; 
 				f[j][2] -= ff * zr; 
 
-				double r6c = pow(1 / rc, 6);
-				double r12c = pow(r6c, 2);
-				double ecut = 4 * (r12c - r6c); 
+				
 				en = en + 4 * r6i * (r6i - 1)- ecut; 
 			}
-
-
 		}
-	
-
 }
 
 
@@ -118,6 +118,7 @@ void integrate() {
 	sumv[1] = 0;
 	sumv[2] = 0;
 	sumv2 = 0;
+	etot = 0;
 	for (int i = 0; i < npart; i++) {
 		double xx = 2 * x[i][0] - xm[i][0] + dt*dt*f[i][0];
 		double vx = (xx - xm[i][0]) / (2 * dt);
@@ -136,8 +137,8 @@ void integrate() {
 		xm[i][2] = x[i][2]; 
 		x[i][2] = zz; 
 	}
-	double temp = sumv2 / (3 * npart); 
-	double etot = (en + 0.5*sumv2) / npart;
+	temp = sumv2 / (3 * npart); 
+	etot = (en + 0.5*sumv2) / npart;
 	
 
 }
@@ -145,15 +146,37 @@ void integrate() {
 
 int main() {
 	init();
-	int t = 0;
-	int tmax = 10; 
+	double t = 0;
+
+	int counter = 0; 
+	int timestep = 0; 
+	double r6c = pow(1 / rc, 6);
+	double r12c = pow(r6c, 2);
+	ecut = 4 * (r12c - r6c);
+
+	ofstream myfile;
+	myfile.open("data.txt");
+	// myfile.open("coordinates.txt"); 
+	myfile << "Iteration: " << "	 " << "KE: " << "		 " << "Temp:" << "			 " << "PE:" << endl;
+
 	while (t<tmax) {
-		force();
-		integrate();
-		t = t + dt;
-		//sample();
+		counter += 1; 
+		timestep += 1; 
+		
+			force();
+			integrate();
+			t = t + dt;
+		if (timestep == 1000) {
+			timestep = 0;
+			myfile << counter << "   		  " << etot << "		 " << temp << "		" << en / npart << endl;
+			/*for (int i = 0; i < npart; i++) {
+				myfile << x[i][0] << "  " << x[i][1] << "  " << x[i][2] << endl; 
+			}*/ //un-comment this for loop to get data of xyz coordinates for all particles every 1000 steps. 
+		}
 	}
 
-
+	myfile.close();
+	 
+	
 	return 0;
 }
