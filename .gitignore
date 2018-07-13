@@ -27,3 +27,5 @@ Numerical Methods/Adaptive Integration/.vs/Adaptive Integration/v15/.suo
 Random Compiler/.vs/Random/v15/.suo
 *.opendb
 *.pdf
+Molecular Dynamics/example.xyz
+Molecular Dynamics/load.tcl
