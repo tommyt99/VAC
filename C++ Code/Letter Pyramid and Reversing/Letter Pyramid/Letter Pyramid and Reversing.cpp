@@ -54,3 +54,36 @@ int main() {
 	return 0;
 }
 
+
+// Palindrome checker
+#include <iostream>
+#include<string>
+
+using namespace std;
+
+int main() {
+	// your code goes here
+	string name;
+	getline(cin, name);
+	cout << "Original word: " << name << endl;
+	cout << "Length: " << name.length() << endl;
+	string reverse;
+
+	for (int i = name.length() - 1; i>-1; i--) {
+		reverse.push_back(name[i]);
+	}
+
+	cout << "Flipped word: " << reverse << endl;
+	cout << "Length(reverse): " << reverse.length() << endl;
+
+	if (reverse == name) {
+		cout << "This is a palindrome!" << endl;
+	}
+	else {
+		cout << "This is not a palindrome, sorry." << endl;
+	}
+
+
+	return 0;
+}
+
