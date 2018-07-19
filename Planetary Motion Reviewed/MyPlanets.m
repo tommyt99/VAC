@@ -4,39 +4,34 @@ close all;
 
 G = -6.67*10^-11 ; 
 m_sun = 1.989*10^30; 
-% x=[];
-x(1) = 1;
-% y=[];
-y(1) = 1;
-% vx=[];
-vx(1) = 1;
-% vy=[];
-vy(1) = 1;
 
-% T = 365*24*60*60;
-T = 20; 
-N = 1000;
-h = T/N; 
+% x(1) = 1.521*10^11;
+x(1) = 1*10^11;
+y(1) = 0;
+vx(1) = 0;
+vy(1) = 29300;
 
-test = 0; 
+T = 365*24*60*60;
+N = 365;
+h = T/N * 0.05;
+time = 0; 
+n = 1 ; 
 
-
-for n = 1:N-1
+while (time < T)
     ax = G*m_sun*x(n)/(x(n)^2 + y(n)^2)^(3/2);
     ay = G*m_sun*y(n)/(x(n)^2 + y(n)^2)^(3/2);
-
     xs = x(n)+vx(n)*h;
     ys = y(n)+vy(n)*h;
     vxs = vx(n) + ax*h;
     vys = vy(n) + ay*h;
     axs = (G*m_sun*xs)/((xs^2 + ys^2)^(3/2));
     ays = (G*m_sun*ys)/((xs^2 + ys^2)^(3/2));
-
     vx(n+1) = vx(n) + 0.5*(ax + axs)*h;
     vy(n+1) = vy(n) + 0.5*(ay + ays)*h;
-
     x(n+1) = x(n) + 0.5*(vx(n) + vxs)*h;
     y(n+1) = y(n) + 0.5*(vy(n) + vys)*h;
+    n = n + 1 ; 
+    time = time + h; 
 end
 
 plot([0],[0],'*','MarkerSize',10)

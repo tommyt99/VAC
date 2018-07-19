@@ -1,4 +1,5 @@
 // Gauss Seidel Method
+// with Sucessive Over-Relaxation (SOR)
 #include <iostream>
 #include <math.h>
 using namespace std;
@@ -15,7 +16,7 @@ int main()
 	double EPSILON = pow(10, -6);
 	double x[3] = { 1,1,1 };
 	double x_new[3] = { 0,0,0 };
-	double lambda = 1.50; 
+	double lambda = 1.50; // Lambda between 1 and 2 
 	int iteration = 0; 
 
 	while (error / 3 > EPSILON)
@@ -32,11 +33,11 @@ int main()
 					x_new[i] += a[i][j] * x[j];
 				}
 			}
-			x_new[i] = (b[i] - x_new[i]) / a[i][i];	// code before adding lambda
+			//x_new[i] = ((b[i] - x_new[i]) / a[i][i]) (This is before adding SOR) 
+			x_new[i] = ((b[i] - x_new[i]) / a[i][i]) * (lambda + (1 - lambda) * x[i]);
 			error += abs(x_new[i] - x[i]);
 			x[i] = x_new[i];
-			/*x_new[i+1] =   x_new[i] + (lambda/a[i][i]) * (b[i] - a[i][i]*x_new[i] - a[i][i]*x_new[i] );
-			error += abs(x_new[i+1] - x_new[i]);*/
+
 			
 		}
 	}
