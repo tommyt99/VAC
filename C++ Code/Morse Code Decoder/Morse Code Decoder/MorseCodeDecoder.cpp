@@ -1,100 +1,81 @@
 #include <iostream>
-#include <array>
-#include <vector>
-#include <cmath>
 #include <string>
-using namespace std; 
+#include <cctype>
+using namespace std;
+string engtomol(string, string[]);
+string moltoeng(string, char[]);
 
-string translator(string n, int a) {
-	string alphabet = "abcdefghijklmnopqrstuvwxyz";
-	string morse[] = { "*-","-***","-*-*","-**","*","**-*","--*","****",
-		"**","*---","-*-","*-**","--","-*","---","*--*","--*-", "*-*","***",
-		"-","**-","***-","*--","-**-","-*--","--**" };
-	string translation;
-	if (a == 1) {			 //When user chooses English to Morse
-		int position = alphabet.find(n);
-		if (position != -1)
-			return morse[position];
+int main()
+{
+	char alpha[26] = { 'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z' };
+	string morse[81] = { ".-", "-...", "-.-.", "-..", ".", "..-.", "--.", "....", "..", ".---", "-.-", ".-..", "--", "-.", "---", ".--.", "--.-", ".-.", "...", "-", "..-", "...-", ".--", "-..-", "-.--", "--.." };
+	string text, morsecode;
+	char choice;
+	char repeat = 'y';
 
-		else
-			return " ";
-	}
-	
-	if (a==2) {				 //When user chooses Morse to English (a==2)
-		if (morse->find(n) != -1) {
-			int position = morse->find(n);
-			return alphabet[position];
+	while (repeat == 'y')
+	{
+		cout << "Select 1 to decode English text to Morse code.\nSelect 2 to encode Morse code to English text" << endl;
+		cin >> choice;
+
+		if (choice == '1')
+		{
+			cout << "NOTE. DO NOT INPUT A NON ENGLISH CHARACTER. THIS TRANSLATOR EXCLUSIVELY TRANSLATES ENGLISH TEXTS (CAPITALIZED AND NON CAPITALIZED).\n";
+			cout << "Enter a text to translate, each word seperated by a space if you want to translate more than one word: ";
+			cin.get();
+			getline(cin, text);
+			cout << "TEXT: " << text << endl;
+			cout << "MORSE CODE: " << engtomol(text, morse) << endl;
 		}
-		else
-			return " "; 
+		else if (choice == '2')
+		{
+			cout << "Enter a morsecode to translate, each letter code seperated by a space. If you want to translate more than one word, have 3 spaces between each word (for example, ... --- ...   ... --- ...): ";
+			cin.get();
+			getline(cin, morsecode);
+			cout << "MORSECODE: " << morsecode << endl;
+			cout << "TEXT: " << moltoeng(morsecode, alpha) << endl;
+		}
+
+		cout << "Would you like to continue? Press y to repeat. Press any other key to exit. ";
+		cin >> repeat;
 	}
-
-	int lowercase(string input); {
-		string input;
-		for (int i =0; i <input.length(); ++i)
-			if (input[i] >= 65 && input[i] <= 90) {
-				input[i] += 32;
-			}
-	}
-
-
-	void english2morse(); {
-	cout << "Enter the message that you would want to turn to morse code:";
-	string input;
-	getline(cin, input);
-	lowercase(input);
-	int a = 1;
-	string phrase = "";
-	for (int i = 0; i<input.length(); i++) {
-		
-			phrase += translator(input[i], a);
-	}
-	cout << phrase << endl;
-
-	
-	int oh;
-	cin >> oh;
-	
+	return 0;
 }
 
 
-	void morse2english(); {
-	int a = 2; 
-	cout << "Enter morse code to convert to English." << endl; 
-	cout << "One space between letters and two spaces between words." << endl;
-	cout << "Enter morse code with each letter inside quotations:  " <<endl;
-	string input; 
-	getline(cin, input); 
-	string array[] = {input}; 
-	string phrase = ""; 
-	for (int i = 0; i< array.length(); i++) {
-		
-			phrase += translator(array[i], a);
-	}
-	cout << phrase << endl;
-	
-	}
-	
 
-
-
-	int main(); {
-	cout << "1: English to Morse." << endl;
-	cout << "2: Morse to English." << endl;
-	int a; 
-	cin >> a;
-	
-	if (a == 1) {
-		english2morse();
+string engtomol(string text, string morse[])
+{
+	string morsevalue;
+	string spacesbtwletters = " ";
+	string spacesbtwwords = "  ";//2 spaces because im going to add it with spacesbtwletters so that it will = 3
+	for (int k = 0; text[k]; k++)
+	{
+		if (text[k] != ' ') //if the word(s) did not encounter a space
+		{
+			text[k] = toupper(text[k]); //upper case letters and lower case letters are the same hence have the same appropriate morse code.
+			morsevalue = spacesbtwletters += morse[text[k] - 'A'] + " ";//A is the first value of the array. by subtracting its finding the appropriate morse code for each letters
+		}
+		if (text[k] == ' ')
+		{
+			spacesbtwletters += spacesbtwwords;//adds 3 spaces when there is a space between words
+		}
 	}
-	/*
-	if (a == 2) {
-		morse2english();
-	}
-	*/
-	
-	int oh;
-	cin >> oh; 
+	return morsevalue;
+}
 
-	return 0; 
+string moltoeng(string morsecode, char alpha[])//code to text function
+{
+	const int count = 0;
+	string tran;
+	string spacesbtwlettercode = " ";
+	string spacesbtwwordcode = " ";
+	for (int k = 0; morsecode[k]; k++)
+	{
+		if (morsecode[k] != ' ')
+		{
+			tran = spacesbtwlettercode += alpha[k];//A is the first value of the array. by subtracting its finding the appropriate
+		}
+	}
+	return tran;
 }

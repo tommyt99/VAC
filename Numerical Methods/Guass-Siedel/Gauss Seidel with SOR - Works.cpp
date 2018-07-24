@@ -1,5 +1,7 @@
 // Gauss Seidel Method
 // with Sucessive Over-Relaxation (SOR)
+// Gauss Seidel updates the previous value with a newer, better value
+// SOR uses a little bit of the previous value and adds it to the newer, better value 
 #include <iostream>
 #include <math.h>
 using namespace std;
@@ -16,8 +18,16 @@ int main()
 	double EPSILON = pow(10, -6);
 	double x[3] = { 1,1,1 };
 	double x_new[3] = { 0,0,0 };
-	double lambda = 1.50; // Lambda between 1 and 2 
+	double lambda = 1.1; // Lambda between 1 and 2 
 	int iteration = 0; 
+
+	for (int i = 0; i<n; i++)
+		for (int j = 0; j < n; j++) {
+			cout << a[i][j] << " ";
+			if (j == n - 1) {
+				cout << endl;
+			}
+		}
 
 	while (error / 3 > EPSILON)
 	{
@@ -41,10 +51,18 @@ int main()
 			
 		}
 	}
+
+
+
 	for (int i = 0; i < n; i++)
 	{
 		cout << "x" << i + 1 << "= " << x[i] << endl;
 	}
+
+	cout << iteration << endl;
+
 	system("PAUSE");
 	return 0;
 }
+
+

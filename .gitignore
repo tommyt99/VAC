@@ -29,3 +29,5 @@ Random Compiler/.vs/Random/v15/.suo
 *.pdf
 Molecular Dynamics/example.xyz
 Molecular Dynamics/load.tcl
+*.tlog
+*.pdb
