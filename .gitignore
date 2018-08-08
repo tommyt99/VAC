@@ -31,3 +31,12 @@ Molecular Dynamics/example.xyz
 Molecular Dynamics/load.tcl
 *.tlog
 *.pdb
+*.xyz
+Parallel Computing/PrimeNumbers.cpp
+Parallel Computing/Parallel Computing Homework 1.docx
+Parallel Computing/Parallel Computing 2.docx
+Parallel Computing/OpenMP Set3/sorting_problem.c
+Parallel Computing/OpenMP Set3/problem4.c
+Parallel Computing/OpenMP Set3/problem3.c
+Parallel Computing/OpenMP Set3/problem2.c
+Parallel Computing/OpenMP Set3/problem1.c

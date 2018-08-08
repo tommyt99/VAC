@@ -13,9 +13,9 @@ double x[npart][3], xm[npart][3];
 double v[npart][3], f[npart][3]; 
 double sumv[3];
 double sumv2; 
-double temp =1 ; 
-const double dt = 0.001; 
-const double box = 6; 
+double temp =1; 
+const double dt = 0.005; 
+const double box = n+2; 
 double xr[3];
 double en;
 double etot; 
@@ -62,7 +62,6 @@ void init() {
 	sumv[1] /= npart;
 	sumv[2] /= npart; 
 	sumv2 /= npart;
-
 	double fs = sqrt(3 * temp / sumv2); 
 		for (int i = 0; i < npart; i++) {
 			v[i][0] = (v[i][0] - sumv[0])*fs;
@@ -82,17 +81,16 @@ void force() {
 		f[i][1] = 0;
 		f[i][2] = 0;
 	}
-
-	for (int i = 0; i < npart-1; i++) 
+	for (int i = 0; i < npart-1; i++) //Periodic Boundary Condition
 		for (int j = i+1; j < npart; j++) {
 			xr = x[i][0] - x[j][0];
-			xr = xr - box * round(xr / box); 
+			xr = xr - (box * round(xr / box)); 
 			yr = x[i][1] - x[j][1];
-			yr = yr - box * round(yr / box);
+			yr = yr - (box * round(yr / box));
 			zr = x[i][2] - x[j][2]; 
-			zr = zr - box * round(zr / box);
+			zr = zr - (box * round(zr / box));
 			r2 = xr*xr + yr*yr + zr*zr; 
-			 
+
 			if (r2 < rc*rc) { 
 				r2i = 1 / r2;
 				r6i = pow(r2i, 3);
@@ -105,8 +103,7 @@ void force() {
 				f[i][2] += ff * zr; 
 				f[j][2] -= ff * zr; 
 
-				
-				en = en + 4 * r6i * (r6i - 1)- ecut; 
+				en = en + 4 * r6i * (r6i - 1)- ecut; //potential energy
 			}
 		}
 }
@@ -139,15 +136,40 @@ void integrate() {
 	}
 	temp = sumv2 / (3 * npart); 
 	etot = (en + 0.5*sumv2) / npart;
-	
 
+	//for (int i = 0; i < npart; i++) { //wall
+	//	if (x[i][0] > box) {
+	//		x[i][0] = x[i][0] - box;
+	//		xm[i][0] = xm[i][0] - box;
+	//	}
+	//	if (x[i][1] > box) {
+	//		x[i][1] = x[i][1] - box;
+	//		xm[i][1] = xm[i][1] - box;
+	//	}
+	//	if (x[i][2] > box) {
+	//		x[i][2] = x[i][2] - box;
+	//		xm[i][2] = xm[i][2] - box;
+	//	}
+	//	if (x[i][0] < 0) {
+	//		x[i][0] = x[i][0] + box;
+	//		xm[i][0] = xm[i][0] + box;
+	//	}
+	//	if (x[i][1] < 0) {
+	//		x[i][1] = x[i][1] + box;
+	//		xm[i][1] = xm[i][1] + box;
+	//	}
+	//	if (x[i][2] < 0) {
+	//		x[i][2] = x[i][2] + box;
+	//		xm[i][2] = xm[i][2] + box;
+	//	}
+	//}
 }
 
 
 int main() {
+
 	init();
 	double t = 0;
-
 	int counter = 0; 
 	int timestep = 0; 
 	double r6c = pow(1 / rc, 6);
@@ -156,27 +178,32 @@ int main() {
 
 	ofstream myfile;
 	myfile.open("data.txt");
-	// myfile.open("coordinates.txt"); 
-	myfile << "Iteration: " << "	 " << "KE: " << "		 " << "Temp:" << "			 " << "PE:" << endl;
+	myfile << "Iteration: " << "	 " << "Energy per particle: " << "		 " << "Temp:" << "			 " << "PE per particle:" << endl;
+	
+	ofstream positions("positions.xyz");
+	positions << npart << endl; 
+	
+	ofstream velocity("velocity.txt");
+	velocity << "Velocity of center of mass." << endl;
+	velocity << "Velocity in x:" << " " << "Velocity in y:" << " " << "Velocity in z:" << " " << endl; 
 
 	while (t<tmax) {
 		counter += 1; 
 		timestep += 1; 
-		
-			force();
-			integrate();
-			t = t + dt;
-		if (timestep == 1000) {
+		force();
+		integrate();
+		t = t + dt;
+		if (timestep == 10) { // data of xyz coordinates for all particles every 1000 steps. 
 			timestep = 0;
 			myfile << counter << "   		  " << etot << "		 " << temp << "		" << en / npart << endl;
-			/*for (int i = 0; i < npart; i++) {
-				myfile << x[i][0] << "  " << x[i][1] << "  " << x[i][2] << endl; 
-			}*/ //un-comment this for loop to get data of xyz coordinates for all particles every 1000 steps. 
+			for (int i = 0; i < npart; i++) {
+				positions << "ATOM" << i << " " << x[i][0] << "  " << x[i][1] << "  " << x[i][2] << endl; 
+			} 
 		}
+		velocity << sumv[0] << " " << sumv[1] << " " << sumv[2] << "	" << "Magnitude: " << (sumv[0] * sumv[0]) + (sumv[1] * sumv[1]) + (sumv[2] * sumv[2]) << endl;
 	}
-
 	myfile.close();
-	 
-	
+	positions.close();
+	velocity.close();
 	return 0;
 }

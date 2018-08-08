@@ -130,7 +130,7 @@ void Integration() {
 		vx = (xx - Xm[i]) / (2 * dt);
 		vy = (yy - Ym[i]) / (2 * dt);
 		vz = (zz - Zm[i]) / (2 * dt);
-		sumv = sumv + vx + vy + vz;
+		sumv = sumv + vx + vy + vz; // I don't agree with this, fix later.
 		sumv2 = sumv2 + (vx * vx) + (vy * vy) + (vz * vz);
 		Xm[i] = Xpos[i];
 		Ym[i] = Ypos[i];
