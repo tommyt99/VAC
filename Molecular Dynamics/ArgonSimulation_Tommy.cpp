@@ -6,7 +6,7 @@
 
 using namespace std;
 
-const int tmax = 10; 
+const int tmax = 50; 
 const int n = 5;
 const int npart = n*n*n; 
 double x[npart][3], xm[npart][3];
@@ -15,7 +15,7 @@ double sumv[3];
 double sumv2; 
 double temp =1; 
 const double dt = 0.005; 
-const double box = n+2; 
+const double box = n; 
 double xr[3];
 double en;
 double etot; 
