@@ -103,4 +103,5 @@ int main() {
 		cout << x[i] << " ";
 	}
 	cout << endl;
+	system("PAUSE");
 }
