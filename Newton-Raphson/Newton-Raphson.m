@@ -24,14 +24,16 @@ end
 end
 
 fprintf('This is the root for cos(x) - x. : %d', xn) 
-x = log(1./h_vector) ;
-y = log(error_vector); 
-figure()
-plot(x,y)
-xlabel('log(1/h)')
-ylabel('log(error)')
-title('cos(x) -x')
-
+% x = log(1./h_vector) ;
+% y = log(error_vector); 
+% figure()
+% plot(x,y)
+% xlabel('log(1/h)')
+% ylabel('log(error)')
+% title('cos(x) -x')
+%%
+clc;
+clear;
 
 xn = 1 ; 
 error = 0.00000001;
@@ -54,12 +56,13 @@ while (true)
   
 end
 
-fprintf('\nThis is the root for e^-x - x : %d ', xn) 
-x = log(1./h_vector) ;
-y = log(error_vector); 
-figure()
-plot(x,y)
-xlabel('log(1/h)')
-ylabel('log(error)')
-title('e^-x -x ') 
+fprintf('\nThis is the root for e^-x - x : %f ', xn) 
+fprintf('\nThis is the number of iterations: %i', counter)
+% x = log(1./h_vector) ;
+% y = log(error_vector); 
+% figure()
+% plot(x,y)
+% xlabel('log(1/h)')
+% ylabel('log(error)')
+% title('e^-x -x ') 
 
