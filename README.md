@@ -1,3 +1,3 @@
 # VAC
 
-Vistas in Advanced Computing Fellowship - University of Houston. 
+Vistas in Advanced Computing Fellowship
