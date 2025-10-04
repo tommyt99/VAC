@@ -1,42 +1,85 @@
+# macOS system files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-Project1/.vs/Project1/v15/Browse.VC.db
+# Visual Studio / Visual Studio Code
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# Build directories
+Debug/
+Release/
+x64/
+x86/
+build/
+bin/
+obj/
+
+# Compiled files
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.o
+*.obj
+
+# Temporary files
+*.tmp
+*.temp
+*~
+*.swp
+*.swo
+
+# Log files
 *.log
 
-*.db
-*.ilk
-*.pdb
-*.tlog
-*.ipch
-*.vcxproj
-*.filters
-*.user
-*.obj
-*.enc
-*.idb
-*.exe
-*.ilk
-*.tlog
+# Archive files (if you don't want to track them)
 *.zip
-*.txt
-C++ Code/Rounding Function Financial App/.vs/Rounding Function Financial App/v15/.suo
-Numerical Methods/Implicit and Explicit Integration/Implicit and Explicition MATLAB Code.docx
-Numerical Methods/Implicit and Explicit Integration/Implicit and Explicit Integration MATLAB.m
-Numerical Methods/Implicit and Explicit Integration/Implicit and Explicit Integration MATLAB.asv
-Numerical Methods/Adaptive Integration/.vs/Adaptive Integration/v15/.suo
-*.sln
-Random Compiler/.vs/Random/v15/.suo
-*.opendb
-*.pdf
-Molecular Dynamics/example.xyz
-Molecular Dynamics/load.tcl
-*.tlog
-*.pdb
-*.xyz
-Parallel Computing/PrimeNumbers.cpp
-Parallel Computing/Parallel Computing Homework 1.docx
-Parallel Computing/Parallel Computing 2.docx
-Parallel Computing/OpenMP Set3/sorting_problem.c
-Parallel Computing/OpenMP Set3/problem4.c
-Parallel Computing/OpenMP Set3/problem3.c
-Parallel Computing/OpenMP Set3/problem2.c
-Parallel Computing/OpenMP Set3/problem1.c
+*.rar
+*.7z
+*.tar.gz
+
+# MATLAB temporary files
+*.asv
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IDE specific
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
