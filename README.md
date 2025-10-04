@@ -1,3 +1,1 @@
-# VAC
-
-Vistas in Advanced Computing Fellowship
+# Scientific Computing / High-Performance Computing
