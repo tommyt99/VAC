@@ -78,7 +78,7 @@ function getUniforms(prog, names) {
 }
 
 function resize() {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.75);
   const width = Math.max(1, Math.floor(window.innerWidth * dpr));
   const height = Math.max(1, Math.floor(window.innerHeight * dpr));
   if (canvas.width !== width || canvas.height !== height) {

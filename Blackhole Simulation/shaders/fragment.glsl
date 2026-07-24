@@ -17,8 +17,8 @@ const float RS = 2.0 * M;
 const float PHOTON_SPHERE = 3.0 * M;
 const float DISK_INNER = 6.0 * M;   // ISCO
 const float DISK_OUTER = 18.0 * M;
-const int MAX_STEPS = 320;
-const float ESCAPE_R = 80.0;
+const int MAX_STEPS = 260;
+const float ESCAPE_R = 70.0;
 
 float hash21(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -121,7 +121,7 @@ vec3 trace(vec3 origin, vec3 dir) {
     float nearPhoton = smoothstep(0.8, 0.0, abs(r - PHOTON_SPHERE));
     glow += nearPhoton * 0.012 * transmittance;
 
-    float h = clamp(r * 0.035, 0.02, 0.35);
+    float h = clamp(r * 0.045, 0.025, 0.4);
     vec3 nextPos = pos;
     vec3 nextVel = vel;
     rk2Step(nextPos, nextVel, h);
@@ -168,18 +168,14 @@ vec3 ACESFilm(vec3 x) {
 }
 
 void main() {
-  // Light 2x2 supersampling for cleaner lensing edges.
+  // Fixed sub-pixel offset softens geodesic edges without temporal sparkle.
   vec2 texel = 1.0 / uResolution;
-  vec3 sum = vec3(0.0);
-  for (int y = 0; y < 2; y++) {
-    for (int x = 0; x < 2; x++) {
-      vec2 offset = (vec2(float(x), float(y)) - 0.5) * texel;
-      vec3 origin;
-      vec3 dir = cameraRay(vUv + offset, origin);
-      sum += trace(origin, dir);
-    }
-  }
-  vec3 color = sum * 0.25;
+  float j = hash21(gl_FragCoord.xy) - 0.5;
+  vec2 offset = vec2(j, fract(j * 12.9898) - 0.5) * texel * 0.85;
+
+  vec3 origin;
+  vec3 dir = cameraRay(vUv + offset, origin);
+  vec3 color = trace(origin, dir);
 
   color = ACESFilm(color * 1.15);
   color = pow(color, vec3(1.0 / 2.2));
