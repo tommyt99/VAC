@@ -1,0 +1,886 @@
+:root {
+  --worktop: #d8d6cf;
+  --paper: #faf9f4;
+  --paper-dark: #eceae3;
+  --ink: #242622;
+  --muted: #666961;
+  --rule: #c9c6bc;
+  --rule-dark: #555951;
+  --slate: #315d66;
+  --slate-dark: #24474e;
+  --oxide: #985044;
+  --warning: #8d621d;
+  --green: #4e684f;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+}
+
+.stApp {
+  color: var(--ink);
+  background-color: var(--worktop);
+  background-image:
+    radial-gradient(circle, rgba(36, 38, 34, 0.07) 0 0.7px, transparent 0.9px),
+    radial-gradient(circle, rgba(255, 255, 255, 0.36) 0 0.8px, transparent 1px);
+  background-position: 0 0, 8px 10px;
+  background-size: 17px 19px, 23px 29px;
+}
+
+[data-testid="stHeader"] {
+  background: transparent;
+}
+
+[data-testid="stMainBlockContainer"] {
+  position: relative;
+  max-width: 1120px;
+  margin-top: 2rem;
+  margin-bottom: 2.5rem;
+  padding: clamp(1.75rem, 4vw, 3.25rem);
+  border: 1px solid #aaa79e;
+  border-top: 6px solid var(--slate);
+  border-radius: 2px;
+  background: var(--paper);
+  box-shadow: 9px 12px 0 rgba(52, 52, 47, 0.13);
+}
+
+[data-testid="stMainBlockContainer"]::before {
+  position: absolute;
+  top: -6px;
+  left: -1px;
+  width: 94px;
+  height: 6px;
+  content: "";
+  background: var(--oxide);
+}
+
+.st-key-dark_mode {
+  position: absolute;
+  top: 0.55rem;
+  right: clamp(1.75rem, 4vw, 3.25rem);
+  z-index: 10;
+  width: auto;
+}
+
+.st-key-dark_mode [data-testid="stWidgetLabel"] p {
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.st-key-dark_mode button[role="switch"] {
+  border: 1px solid var(--rule-dark);
+  box-shadow: none;
+}
+
+.cs-sheet-header {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  align-items: stretch;
+  border-top: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+}
+
+.cs-sheet-code {
+  display: grid;
+  min-height: 44px;
+  place-items: center;
+  color: var(--paper);
+  background: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+}
+
+.cs-sheet-name {
+  display: flex;
+  align-items: center;
+  padding: 0.65rem 1rem;
+  color: var(--ink);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.065em;
+  text-transform: uppercase;
+}
+
+.cs-sheet-meta {
+  display: flex;
+  border-left: 1px solid var(--ink);
+}
+
+.cs-sheet-meta span {
+  display: grid;
+  min-width: 96px;
+  padding: 0.55rem 0.75rem;
+  place-items: center;
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.cs-sheet-meta span + span {
+  border-left: 1px solid var(--rule);
+}
+
+.cs-cover {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr) 270px;
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  min-height: 355px;
+  padding: clamp(2.5rem, 6vw, 4.5rem) 0;
+  border-bottom: 1px solid var(--ink);
+}
+
+.cs-cover-number {
+  align-self: stretch;
+  padding-right: 1rem;
+  border-right: 1px solid var(--rule);
+  color: var(--oxide);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 3.5rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 0.85;
+  writing-mode: vertical-rl;
+}
+
+.cs-cover-copy {
+  align-self: center;
+}
+
+.cs-overline {
+  margin-bottom: 0.9rem;
+  color: var(--slate);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.cs-cover-copy h1 {
+  margin: 0;
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(3.1rem, 6.3vw, 5.25rem);
+  font-weight: 500;
+  letter-spacing: -0.055em;
+  line-height: 0.9;
+}
+
+.cs-cover-copy h1 em {
+  color: var(--oxide);
+  font-weight: 400;
+}
+
+.cs-cover-copy > p {
+  max-width: 590px;
+  margin: 1.4rem 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+
+.cs-cover-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 600px;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  border-top: 1px solid var(--rule-dark);
+  border-bottom: 1px solid var(--rule-dark);
+}
+
+.cs-cover-facts > div {
+  padding: 0.65rem 0.8rem;
+}
+
+.cs-cover-facts > div + div {
+  border-left: 1px solid var(--rule);
+}
+
+.cs-cover-facts dt {
+  color: var(--muted);
+  font-size: 0.62rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.cs-cover-facts dd {
+  margin: 0.2rem 0 0;
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.cs-specimen {
+  position: relative;
+  display: grid;
+  min-height: 260px;
+  place-items: center;
+  border-left: 1px solid var(--rule);
+}
+
+.cs-cylinder {
+  position: relative;
+  width: 176px;
+  height: 230px;
+}
+
+.cs-cylinder-top,
+.cs-cylinder-body {
+  position: absolute;
+  left: 18px;
+  width: 140px;
+  border: 2px solid var(--ink);
+  background-color: #d0cdc3;
+  background-image:
+    radial-gradient(circle, #77786f 0 1.5px, transparent 1.7px),
+    radial-gradient(circle, #a3a197 0 1px, transparent 1.2px),
+    radial-gradient(circle, #e5e1d7 0 2px, transparent 2.2px);
+  background-position: 3px 4px, 11px 13px, 17px 7px;
+  background-size: 18px 20px, 23px 19px, 29px 31px;
+}
+
+.cs-cylinder-top {
+  top: 8px;
+  z-index: 2;
+  height: 45px;
+  border-radius: 50%;
+}
+
+.cs-cylinder-body {
+  top: 30px;
+  height: 176px;
+  border-top: 0;
+  border-radius: 0 0 48% 48% / 0 0 9% 9%;
+}
+
+.cs-cylinder-label {
+  position: absolute;
+  top: 100px;
+  left: 42px;
+  z-index: 3;
+  width: 92px;
+  padding: 0.5rem 0.35rem;
+  border: 1px solid var(--ink);
+  color: var(--ink);
+  background: var(--paper);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.63rem;
+  font-weight: 750;
+  line-height: 1.35;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.cs-specimen-caption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.cs-section-heading {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  margin: 3.25rem 0 1.25rem;
+  border-top: 3px solid var(--ink);
+  border-bottom: 1px solid var(--rule);
+}
+
+.cs-section-code {
+  display: grid;
+  min-height: 54px;
+  place-items: center;
+  color: var(--paper);
+  background: var(--oxide);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.cs-section-title {
+  display: flex;
+  gap: 1.5rem;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.8rem 1rem;
+  background: var(--paper-dark);
+}
+
+.cs-section-title h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 750;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.cs-section-title p {
+  max-width: 550px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  text-align: right;
+}
+
+div[data-testid="stForm"] {
+  margin: 0 0 3.5rem;
+  padding: 0 0 1.75rem;
+  border: 0;
+  border-bottom: 3px double var(--ink);
+  border-radius: 0;
+  background: transparent;
+}
+
+.cs-input-group {
+  margin: 0 0 0.9rem;
+  padding: 0.45rem 0.65rem;
+  border-top: 1px solid var(--rule-dark);
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  background: var(--paper-dark);
+  font-size: 0.74rem;
+  font-weight: 750;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+[data-testid="stNumberInput"] label p {
+  color: #4d514c;
+  font-size: 0.75rem;
+  font-weight: 550;
+}
+
+[data-testid="stNumberInput"] [data-baseweb="input"] {
+  min-height: 44px;
+  overflow: hidden;
+  border: 1px solid var(--rule-dark);
+  border-radius: 2px;
+  background: #fffef9;
+  box-shadow: inset 0 -2px 0 rgba(49, 93, 102, 0.08);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+[data-testid="stNumberInput"] [data-baseweb="input"]:focus-within {
+  border-color: var(--slate);
+  box-shadow: 0 0 0 3px rgba(49, 93, 102, 0.17);
+}
+
+[data-testid="stNumberInput"] input {
+  color: var(--ink);
+  background: transparent;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+
+[data-testid="stNumberInput"] button {
+  color: var(--muted);
+  border-color: var(--rule);
+  background: var(--paper-dark);
+}
+
+[data-testid="stNumberInput"] button:hover {
+  color: var(--paper);
+  border-color: var(--slate);
+  background: var(--slate);
+}
+
+.cs-form-note {
+  margin: 1.15rem 0 0.4rem;
+  padding: 0.75rem 0;
+  border-top: 1px dashed var(--rule-dark);
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+.cs-form-note strong {
+  color: var(--ink);
+}
+
+[data-testid="stFormSubmitButton"] {
+  display: flex;
+  justify-content: flex-end;
+}
+
+[data-testid="stFormSubmitButton"] button {
+  width: min(100%, 270px);
+  min-height: 48px;
+  margin-top: 0.5rem;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  color: var(--paper);
+  background: var(--ink);
+  box-shadow: 4px 4px 0 var(--oxide);
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: background 120ms ease, box-shadow 120ms ease;
+}
+
+[data-testid="stFormSubmitButton"] button:hover {
+  color: var(--paper);
+  border-color: var(--slate-dark);
+  background: var(--slate-dark);
+  box-shadow: 4px 4px 0 var(--oxide);
+}
+
+[data-testid="stFormSubmitButton"] button:focus-visible,
+[data-testid="stNumberInput"] input:focus-visible {
+  outline: 3px solid rgba(49, 93, 102, 0.36);
+  outline-offset: 3px;
+}
+
+.cs-result-classification {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 0.85rem;
+  padding: 0.55rem 0.75rem;
+  border: 2px solid var(--oxide);
+  color: var(--oxide);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.cs-result-classification span {
+  color: var(--muted);
+}
+
+[data-testid="stMetric"] {
+  min-height: 150px;
+  padding: 1.1rem 1.15rem;
+  border: 1px solid var(--rule-dark);
+  border-radius: 0;
+  background: var(--paper-dark);
+  box-shadow: none;
+}
+
+[data-testid="stMetric"] label,
+[data-testid="stMetric"] [data-testid="stMetricLabel"] {
+  color: var(--muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.025em;
+}
+
+[data-testid="stMetric"] [data-testid="stMetricValue"] {
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+
+.st-key-primary_result [data-testid="stMetric"] {
+  min-height: 150px;
+  border-color: var(--ink);
+  border-bottom: 6px solid var(--oxide);
+  background: var(--ink);
+}
+
+.st-key-primary_result [data-testid="stMetric"] label,
+.st-key-primary_result [data-testid="stMetricLabel"] {
+  color: #c9c8bf;
+}
+
+.st-key-primary_result [data-testid="stMetricValue"] {
+  color: var(--paper);
+  font-size: clamp(2.25rem, 5vw, 3.45rem);
+}
+
+.cs-unit-line {
+  margin: 0.65rem 0 1.2rem;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  text-transform: uppercase;
+}
+
+[data-testid="stAlert"] {
+  border: 1px solid #c7a55b;
+  border-left: 5px solid var(--warning);
+  border-radius: 0;
+  color: #5f4305;
+  background: #fff7de;
+}
+
+.cs-subheading {
+  margin: 2rem 0 0;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.cs-readouts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0.6rem 0 3.25rem;
+  border: 1px solid var(--rule-dark);
+  border-top: 3px solid var(--ink);
+}
+
+.cs-readout {
+  padding: 0.8rem 0.9rem;
+  background: var(--paper);
+}
+
+.cs-readout + .cs-readout {
+  border-left: 1px solid var(--rule);
+}
+
+.cs-readout span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.65rem;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.cs-readout strong {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cs-chart-header {
+  display: flex;
+  gap: 2rem;
+  align-items: end;
+  justify-content: space-between;
+  margin: 0 0 1rem;
+  border-top: 3px solid var(--ink);
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper-dark);
+}
+
+.cs-chart-heading {
+  display: flex;
+  min-width: 310px;
+  align-items: stretch;
+}
+
+.cs-chart-heading .cs-section-code {
+  width: 54px;
+  flex: 0 0 54px;
+}
+
+.cs-chart-heading > div:last-child {
+  padding: 0.75rem 1rem;
+}
+
+.cs-chart-heading h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.98rem;
+  font-weight: 750;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.cs-chart-heading span {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cs-chart-header > p {
+  max-width: 500px;
+  margin: 0;
+  padding: 0.7rem 1rem 0.7rem 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  text-align: right;
+}
+
+[data-testid="stPlotlyChart"] {
+  padding: 0.25rem;
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: #fbf7ec;
+  box-shadow: 5px 5px 0 var(--rule);
+}
+
+.cs-pending-ticket {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin: -1.5rem 0 3rem;
+  padding: 0.8rem 1rem;
+  border: 1px dashed var(--rule-dark);
+  background: rgba(250, 249, 244, 0.54);
+}
+
+.cs-pending-ticket span {
+  padding: 0.25rem 0.55rem;
+  color: var(--paper);
+  background: var(--slate);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.64rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cs-pending-ticket p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.cs-footer {
+  display: grid;
+  grid-template-columns: 145px minmax(0, 1.2fr) minmax(0, 0.9fr);
+  gap: 1.2rem;
+  align-items: start;
+  margin-top: 4rem;
+  padding-top: 1rem;
+  border-top: 3px double var(--ink);
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.55;
+}
+
+.cs-footer-label {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--oxide);
+  color: var(--oxide);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.63rem;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.cs-footer-copy strong {
+  color: var(--ink);
+}
+
+.cs-footer-meta {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.61rem;
+  letter-spacing: 0.01em;
+  text-align: right;
+}
+
+@media (max-width: 880px) {
+  .cs-sheet-header {
+    grid-template-columns: 82px 1fr;
+  }
+
+  .cs-sheet-meta {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--ink);
+    border-left: 0;
+  }
+
+  .cs-sheet-meta span {
+    flex: 1;
+  }
+
+  .cs-cover {
+    grid-template-columns: 54px minmax(0, 1fr);
+  }
+
+  .cs-specimen {
+    grid-column: 2;
+    min-height: 230px;
+    border-top: 1px solid var(--rule);
+    border-left: 0;
+  }
+
+  .cs-section-title {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .cs-section-title p {
+    text-align: left;
+  }
+
+  .cs-result-classification,
+  .cs-chart-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .cs-result-classification {
+    gap: 0.25rem;
+  }
+
+  .cs-chart-header {
+    gap: 0;
+  }
+
+  .cs-chart-header > p {
+    max-width: none;
+    padding: 0.75rem 1rem;
+    text-align: left;
+  }
+
+  .cs-readouts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cs-readout + .cs-readout {
+    border-left: 0;
+  }
+
+  .cs-readout:nth-child(even) {
+    border-left: 1px solid var(--rule);
+  }
+
+  .cs-readout:nth-child(n + 3) {
+    border-top: 1px solid var(--rule);
+  }
+
+  .cs-footer {
+    grid-template-columns: 130px 1fr;
+  }
+
+  .cs-footer-meta {
+    grid-column: 2;
+    text-align: left;
+  }
+}
+
+@media (max-width: 640px) {
+  [data-testid="stMainBlockContainer"] {
+    margin: 0;
+    padding: 1.1rem;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    box-shadow: none;
+  }
+
+  .st-key-dark_mode {
+    top: 0.45rem;
+    right: 1.1rem;
+  }
+
+  .cs-sheet-header {
+    grid-template-columns: 74px 1fr;
+  }
+
+  .cs-sheet-name {
+    font-size: 0.67rem;
+  }
+
+  .cs-cover {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 1rem;
+    padding: 2.5rem 0;
+  }
+
+  .cs-cover-number {
+    font-size: 2.5rem;
+  }
+
+  .cs-cover-copy h1 {
+    font-size: clamp(2.75rem, 15vw, 4rem);
+  }
+
+  .cs-cover-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .cs-cover-facts > div {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .cs-cover-facts > div + div {
+    border-top: 1px solid var(--rule);
+    border-left: 0;
+  }
+
+  .cs-specimen {
+    min-height: 215px;
+  }
+
+  .cs-cylinder {
+    transform: scale(0.83);
+  }
+
+  .cs-section-heading {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  .cs-section-code {
+    min-height: 48px;
+  }
+
+  .cs-section-title {
+    padding: 0.65rem 0.75rem;
+  }
+
+  [data-testid="stFormSubmitButton"] button {
+    width: 100%;
+  }
+
+  [data-testid="stMetric"],
+  .st-key-primary_result [data-testid="stMetric"] {
+    min-height: 115px;
+  }
+
+  .cs-chart-heading {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .cs-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .cs-footer-meta {
+    grid-column: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,260 @@
+{
+  "selected_model": "age_monotonic_gradient_boosting",
+  "selection_rule": "one-standard-error rule on grouped-CV MAE, preferring the age-monotonic model when eligible; training partition only",
+  "selection_mae_threshold_mpa": 3.8558613055626596,
+  "random_state": 42,
+  "training_mode": "full",
+  "versions": {
+    "python": "3.12.13",
+    "numpy": "2.3.5",
+    "pandas": "2.2.3",
+    "scikit-learn": "1.9.0",
+    "joblib": "1.5.3",
+    "openpyxl": "3.1.5"
+  },
+  "data_provenance": {
+    "input_files": {
+      "training_data": {
+        "filename": "Concrete_Data.xlsx",
+        "file_sha256": "92f8d04735a374ae55e528c7f1f1acbf5dce0815b104f03f3f000645f0a6df6b",
+        "canonical_schema_sha256": "e43a78116aee3a9360d85db895d5326b2b3a0ab820dcbcc64cd64ec0984651cc",
+        "verified_as_uci_concrete": true
+      },
+      "global_scm_v2": {
+        "filename": "vac-global-scm-v2.xlsx",
+        "file_sha256": "905abfc3c02e036b21fec9ac161e3519b940220b14780036b567b8f1da3a8f28",
+        "expected_sha256": "905abfc3c02e036b21fec9ac161e3519b940220b14780036b567b8f1da3a8f28",
+        "verified": true
+      },
+      "boxcrete": {
+        "filename": "vac-boxcrete-data.csv",
+        "file_sha256": "bfe7319f2ec3a0abdf63f8da467ae6e8a24c2470560078a725e181f522637699",
+        "expected_sha256": "bfe7319f2ec3a0abdf63f8da467ae6e8a24c2470560078a725e181f522637699",
+        "verified": true
+      }
+    },
+    "source_manifest": {
+      "uci_concrete": {
+        "title": "Concrete Compressive Strength",
+        "doi": "10.24432/C5PK67",
+        "url": "https://archive.ics.uci.edu/static/public/165/concrete+compressive+strength.zip",
+        "sha256": "dad85d14de8aee4e07479daa774e6b569a313715b71a3b92c95a07cf91c2c9a7",
+        "canonical_schema_sha256": "e43a78116aee3a9360d85db895d5326b2b3a0ab820dcbcc64cd64ec0984651cc",
+        "license": "CC BY 4.0"
+      },
+      "global_scm_v2": {
+        "title": "Global database of concrete containing supplementary cementitious materials, Version 2",
+        "doi": "10.17632/npwgdyy4np.2",
+        "url": "https://data.mendeley.com/public-files/datasets/npwgdyy4np/files/ca920b60-9724-4aa6-8034-ab77ecf55e33/file_downloaded",
+        "sha256": "905abfc3c02e036b21fec9ac161e3519b940220b14780036b567b8f1da3a8f28",
+        "license": "CC BY 4.0"
+      },
+      "boxcrete": {
+        "title": "BOxCrete SustainableConcrete measured strength data",
+        "repository": "https://github.com/facebookresearch/SustainableConcrete",
+        "commit": "b4f34b996b5cdd028feafb8b9b8e0972ac1bcd9c",
+        "sha256": "bfe7319f2ec3a0abdf63f8da467ae6e8a24c2470560078a725e181f522637699",
+        "license": "MIT"
+      }
+    }
+  },
+  "data_audit": {
+    "raw_rows": 1030,
+    "exact_duplicate_rows_removed": 25,
+    "unique_input_age_rows": 996,
+    "input_age_duplicate_rows_collapsed": 9,
+    "conflicting_input_age_groups": 9,
+    "unique_recipes": 428,
+    "target_mean_mpa": 35.17100679418558,
+    "target_min_mpa": 2.331807832,
+    "target_max_mpa": 82.5992248
+  },
+  "partitions": {
+    "train": {
+      "rows": 726,
+      "recipes": 299
+    },
+    "calibration": {
+      "rows": 143,
+      "recipes": 64
+    },
+    "test": {
+      "rows": 127,
+      "recipes": 65
+    }
+  },
+  "cross_validation": [
+    {
+      "model": "extra_trees",
+      "mean_mae_mpa": 3.666502312500654,
+      "std_mae_mpa": 0.42341958063755536,
+      "mean_rmse_mpa": 5.196216324850823,
+      "std_rmse_mpa": 0.4192146808774746,
+      "mean_r2": 0.8948126700024337,
+      "std_r2": 0.015119533350774851,
+      "total_fit_seconds": 1.3378662490285933
+    },
+    {
+      "model": "age_monotonic_gradient_boosting",
+      "mean_mae_mpa": 3.733873161228739,
+      "std_mae_mpa": 0.27547903309180327,
+      "mean_rmse_mpa": 5.184201272211238,
+      "std_rmse_mpa": 0.21982544087912684,
+      "mean_r2": 0.8952182171686628,
+      "std_r2": 0.012348261829937257,
+      "total_fit_seconds": 8.802894500084221
+    },
+    {
+      "model": "regularized_neural_network",
+      "mean_mae_mpa": 4.100634468743503,
+      "std_mae_mpa": 0.7992234751068182,
+      "mean_rmse_mpa": 5.677486094273084,
+      "std_rmse_mpa": 0.6719274283497766,
+      "mean_r2": 0.8737655803157243,
+      "std_r2": 0.029640003205417504,
+      "total_fit_seconds": 2.072981584118679
+    },
+    {
+      "model": "scaled_rbf_svr",
+      "mean_mae_mpa": 4.19249169490034,
+      "std_mae_mpa": 0.6198670791742895,
+      "mean_rmse_mpa": 5.882929296172831,
+      "std_rmse_mpa": 0.7589836921361043,
+      "mean_r2": 0.8640799023788098,
+      "std_r2": 0.034009903480389875,
+      "total_fit_seconds": 0.16821858403272927
+    },
+    {
+      "model": "ridge_baseline",
+      "mean_mae_mpa": 5.4872027440563755,
+      "std_mae_mpa": 0.6330934793630979,
+      "mean_rmse_mpa": 7.017754705186715,
+      "std_rmse_mpa": 0.6955174083204055,
+      "mean_r2": 0.8054005729621027,
+      "std_r2": 0.05124066155979239,
+      "total_fit_seconds": 0.03779512399341911
+    }
+  ],
+  "evaluation_status": "fixed development holdout; methodology refined after prior holdout inspection; prospective confirmation still required",
+  "development_holdout": {
+    "mae_mpa": 3.9653401729433484,
+    "rmse_mpa": 6.208906039789269,
+    "r2": 0.8624066685120303,
+    "mean_error_mpa": -0.7861500524370824
+  },
+  "development_holdout_recipe_bootstrap_95": {
+    "mae_mpa": {
+      "lower_95": 3.034973126892065,
+      "upper_95": 5.005736252295334
+    },
+    "rmse_mpa": {
+      "lower_95": 4.714176620606332,
+      "upper_95": 7.670012178912416
+    },
+    "r2": {
+      "lower_95": 0.7834238698761117,
+      "upper_95": 0.9163633494395583
+    }
+  },
+  "interval_coverage_nominal": 0.9,
+  "interval_calibration_unit": "maximum absolute residual within each calibration recipe",
+  "prediction_interval": {
+    "empirical_coverage": 0.9212598425196851,
+    "mean_width_mpa": 21.96182873484897,
+    "radius_mpa": 11.022997815647663,
+    "recipe_count": 65,
+    "completely_covered_recipes": 55,
+    "simultaneous_recipe_coverage": 0.8461538461538461
+  },
+  "age_monotonicity": {
+    "age_grid_days": [
+      1,
+      3,
+      7,
+      14,
+      28,
+      56,
+      90,
+      180,
+      365
+    ],
+    "recipes_assessed": 65,
+    "recipes_with_violation": 0,
+    "adjacent_age_pairs": 520,
+    "violating_pairs": 0,
+    "violation_rate": 0.0,
+    "maximum_predicted_drop_mpa": 0.0
+  },
+  "external_evaluation": {
+    "global_scm_v2_28_day_no_silica_fume": {
+      "input_rows": 765,
+      "known_uci_source_rows_excluded": 122,
+      "other_exact_uci_input_rows_excluded": 0,
+      "rows": 643,
+      "sources": 107,
+      "all_rows": {
+        "mae_mpa": 10.479469148746688,
+        "rmse_mpa": 13.60333139088546,
+        "r2": 0.32143793995524717,
+        "mean_error_mpa": 0.07529318634200068
+      },
+      "in_training_domain_rows": 297,
+      "macro_source_mae_mpa": 10.768514528174022,
+      "source_group_bootstrap_95": {
+        "mae_mpa": {
+          "lower_95": 8.931302909309066,
+          "upper_95": 12.123468764796561
+        },
+        "rmse_mpa": {
+          "lower_95": 11.672547435807399,
+          "upper_95": 15.55355177148692
+        },
+        "r2": {
+          "lower_95": 0.16489952668817104,
+          "upper_95": 0.4373957003906405
+        }
+      },
+      "in_training_domain": {
+        "mae_mpa": 10.319887842175325,
+        "rmse_mpa": 13.619904558465608,
+        "r2": 0.2814768147622414,
+        "mean_error_mpa": -1.6901891728829306
+      }
+    },
+    "boxcrete_standard_temperature_concrete": {
+      "input_rows": 381,
+      "known_uci_source_rows_excluded": 0,
+      "other_exact_uci_input_rows_excluded": 0,
+      "rows": 381,
+      "sources": 68,
+      "all_rows": {
+        "mae_mpa": 10.19522002869416,
+        "rmse_mpa": 13.767925582518474,
+        "r2": 0.4826309457296091,
+        "mean_error_mpa": -5.990771256182254
+      },
+      "in_training_domain_rows": 143,
+      "macro_source_mae_mpa": 10.44618144505796,
+      "source_group_bootstrap_95": {
+        "mae_mpa": {
+          "lower_95": 8.704496562604579,
+          "upper_95": 11.950298506169053
+        },
+        "rmse_mpa": {
+          "lower_95": 11.207869365561555,
+          "upper_95": 16.408595621259956
+        },
+        "r2": {
+          "lower_95": 0.38917918822529995,
+          "upper_95": 0.5814619843115238
+        }
+      },
+      "in_training_domain": {
+        "mae_mpa": 7.456300658025026,
+        "rmse_mpa": 9.200317312675644,
+        "r2": 0.5808739121647848,
+        "mean_error_mpa": -4.270235377272485
+      }
+    }
+  }
+}

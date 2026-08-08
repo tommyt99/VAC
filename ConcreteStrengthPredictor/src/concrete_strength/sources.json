@@ -1,0 +1,24 @@
+{
+  "uci_concrete": {
+    "title": "Concrete Compressive Strength",
+    "doi": "10.24432/C5PK67",
+    "url": "https://archive.ics.uci.edu/static/public/165/concrete+compressive+strength.zip",
+    "sha256": "dad85d14de8aee4e07479daa774e6b569a313715b71a3b92c95a07cf91c2c9a7",
+    "canonical_schema_sha256": "e43a78116aee3a9360d85db895d5326b2b3a0ab820dcbcc64cd64ec0984651cc",
+    "license": "CC BY 4.0"
+  },
+  "global_scm_v2": {
+    "title": "Global database of concrete containing supplementary cementitious materials, Version 2",
+    "doi": "10.17632/npwgdyy4np.2",
+    "url": "https://data.mendeley.com/public-files/datasets/npwgdyy4np/files/ca920b60-9724-4aa6-8034-ab77ecf55e33/file_downloaded",
+    "sha256": "905abfc3c02e036b21fec9ac161e3519b940220b14780036b567b8f1da3a8f28",
+    "license": "CC BY 4.0"
+  },
+  "boxcrete": {
+    "title": "BOxCrete SustainableConcrete measured strength data",
+    "repository": "https://github.com/facebookresearch/SustainableConcrete",
+    "commit": "b4f34b996b5cdd028feafb8b9b8e0972ac1bcd9c",
+    "sha256": "bfe7319f2ec3a0abdf63f8da467ae6e8a24c2470560078a725e181f522637699",
+    "license": "MIT"
+  }
+}

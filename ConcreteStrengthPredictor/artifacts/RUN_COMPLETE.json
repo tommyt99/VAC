@@ -1,0 +1,15 @@
+{
+  "status": "complete",
+  "run_id": "e1d6528093f10020",
+  "artifacts": {
+    "MODEL_CARD.md": "6dfbb25735d04472bb0f880ed6e3e9945e9f9be6a7805880ff56a9770d03c2b3",
+    "cv_fold_results.csv": "4f04a09722c633ef2e6f422a53741ec55655d35f5f88e31f6c4a780c54058982",
+    "cv_summary.csv": "2c8179392b92f841ee649e9f1d34c6fcb19266025dcde2f79cdbe7d6c0ae48f8",
+    "development_holdout_predictions.csv": "e24dbc4e2ecb5e2345f86a4d297a5f1e9bf56ed329915c848bdd1af6ba6ef7ff",
+    "external_boxcrete_predictions.csv": "502c85d20ab7a2d8d4c064b139c79195c37a2265972324ae9054d9eba1406844",
+    "external_global_scm_predictions.csv": "e4a922b93241f3e074e07304d5d07231f31f63d999a060e0bd3e243026670b6e",
+    "model.joblib": "a5de5f86413d87971fd46d6e8a2ef8d52221c3899f17a0cb4cd93b199f345469",
+    "split_manifest.json": "8f6798b0f5cbb369d71192f276d54e472780351775ecbc94440adfa0536054fa",
+    "training_report.json": "e1d6528093f1002059eb4dac08f41918f53a9574c58f34e3f66b52f9f493721e"
+  }
+}

@@ -1,0 +1,157 @@
+:root {
+  --worktop: #151816;
+  --paper: #242724;
+  --paper-dark: #30332e;
+  --ink: #f0ede4;
+  --muted: #b8b7ad;
+  --rule: #5a5d55;
+  --rule-dark: #8b8d83;
+  --slate: #94b8bc;
+  --slate-dark: #3e6268;
+  --oxide: #e39577;
+  --warning: #d0a750;
+  --green: #a6b99d;
+}
+
+html {
+  color-scheme: dark;
+}
+
+.stApp {
+  background-color: var(--worktop);
+  background-image:
+    radial-gradient(circle, rgba(235, 232, 222, 0.055) 0 0.7px, transparent 0.9px),
+    radial-gradient(circle, rgba(0, 0, 0, 0.32) 0 0.8px, transparent 1px);
+}
+
+[data-testid="stMainBlockContainer"] {
+  border-color: #5a5d55;
+  background: var(--paper);
+  box-shadow: 9px 12px 0 rgba(0, 0, 0, 0.28);
+}
+
+.st-key-dark_mode [data-testid="stWidgetLabel"] p {
+  color: #c5c9c0;
+}
+
+.st-key-dark_mode button[role="switch"] {
+  border-color: #7b8378;
+}
+
+.cs-sheet-code {
+  color: #f0ede4;
+  background: #171a18;
+}
+
+.cs-section-code {
+  color: #f0ede4;
+  background: #8d4937;
+}
+
+.cs-cylinder-top,
+.cs-cylinder-body {
+  border-color: #b7b5aa;
+  background-color: #85867d;
+  background-image:
+    radial-gradient(circle, #5f625b 0 1.5px, transparent 1.7px),
+    radial-gradient(circle, #a4a59d 0 1px, transparent 1.2px),
+    radial-gradient(circle, #c3c0b5 0 2px, transparent 2.2px);
+}
+
+.cs-cylinder-label {
+  color: #262924;
+  background: #e8e3d7;
+}
+
+[data-testid="stNumberInput"] label p {
+  color: #c2c6bd;
+}
+
+[data-testid="stNumberInput"] [data-baseweb="input"] {
+  border-color: #737a71;
+  background: #242924;
+  box-shadow: inset 0 -2px 0 rgba(120, 174, 179, 0.14);
+}
+
+[data-testid="stNumberInput"] input {
+  color: #f1eee4;
+}
+
+[data-testid="stNumberInput"] button {
+  color: #c2c7bd;
+  border-color: #555c54;
+  background: #30352f;
+}
+
+[data-testid="stNumberInput"] button:hover {
+  color: #f0ede4;
+  border-color: #8b8d83;
+  background: #3e6268;
+}
+
+[data-testid="stFormSubmitButton"] button {
+  color: #f0ede4;
+  border-color: #8b8d83;
+  background: #171a18;
+  box-shadow: 4px 4px 0 #8d4937;
+}
+
+[data-testid="stFormSubmitButton"] button:hover {
+  color: #f0ede4;
+  border-color: #94b8bc;
+  background: #3e6268;
+  box-shadow: 4px 4px 0 #8d4937;
+}
+
+[data-testid="stFormSubmitButton"] button:focus-visible,
+[data-testid="stNumberInput"] input:focus-visible {
+  outline-color: #94b8bc;
+}
+
+.st-key-primary_result [data-testid="stMetric"] {
+  border-color: #8b8d83;
+  border-bottom-color: var(--oxide);
+  background: #171a18;
+}
+
+.st-key-primary_result [data-testid="stMetric"] label,
+.st-key-primary_result [data-testid="stMetricLabel"] {
+  color: #c8c5ba;
+}
+
+.st-key-primary_result [data-testid="stMetricValue"] {
+  color: #f0ede4;
+}
+
+[data-testid="stAlert"] {
+  border-color: #816f46;
+  border-left-color: var(--warning);
+  color: #ebd9b7;
+  background: #352e20;
+}
+
+[data-testid="stAlert"] p,
+[data-testid="stAlert"] div {
+  color: #ebd9b7;
+}
+
+[data-testid="stPlotlyChart"] {
+  border-color: #8b8d83;
+  background: #282b27;
+  box-shadow: 5px 5px 0 #424841;
+}
+
+.cs-pending-ticket {
+  background: rgba(40, 45, 40, 0.58);
+}
+
+.cs-pending-ticket span {
+  color: #f0ede4;
+  background: #3e6268;
+}
+
+@media (max-width: 640px) {
+  [data-testid="stMainBlockContainer"] {
+    border-top-color: var(--slate);
+  }
+}
