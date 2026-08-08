@@ -21,9 +21,12 @@ Debug/
 Release/
 x64/
 x86/
-build/
 bin/
 obj/
+# Anchored to the repo root: an unanchored build/ also matched first-party
+# source such as "Molecular Dynamics/web-lab/build/", which the Vite config
+# imports. Compiled output is already caught by the extension rules below.
+/build/
 
 # Compiled files
 *.exe
@@ -68,6 +71,10 @@ venv.bak/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+
+# Node package managers
+node_modules/
+.pnpm-store/
 
 # IDE specific
 .idea/
