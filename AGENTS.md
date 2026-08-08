@@ -2,23 +2,6 @@
 
 These instructions apply in Cursor and Codex.
 
-## Agency workflow
-
-For multi-file, ambiguous, high-risk, or judgment-heavy work, follow
-[`docs/agent-agency-sop.md`](docs/agent-agency-sop.md).
-
-Use the smallest safe workflow:
-
-1. Make narrow, reversible changes with obvious tests directly.
-2. For nontrivial work, separate planner, worker, and independent judge roles.
-3. Give each worker one bounded outcome, acceptance criteria, and verification.
-4. Parallelize only independent tasks using isolated branches or worktrees.
-5. Stop after two evidence-driven failed correction attempts and escalate.
-6. Never weaken tests, assertions, published tolerances, or security controls merely
-   to obtain a pass.
-7. Do not self-merge, deploy, rewrite shared history, expose secrets, or perform
-   destructive operations without explicit approval.
-
 ## Plan model recommendations
 
 When writing or updating a plan with multiple tasks:
