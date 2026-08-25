@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>F9 S1 — Terminal Descent 3D</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="boot" class="boot">LOADING LZ-1</div>
+<canvas id="view"></canvas>
+<div class="vignette"></div>
+<div class="grain"></div>
+<div class="hud">
+  <div class="panel tl">
+    <div class="brand">LZ-1  ·  FALCON 9 S1</div>
+    <div class="sub" id="phase">terminal descent</div>
+    <div class="row"><span class="k">ALT</span><span class="v" id="hAlt">—</span></div>
+    <div class="row"><span class="k">VZ</span><span class="v" id="hVz">—</span></div>
+    <div class="row"><span class="k">GS</span><span class="v" id="hGs">—</span></div>
+    <div class="row"><span class="k">RANGE</span><span class="v" id="hX">—</span></div>
+    <div class="row"><span class="k">TILT</span><span class="v" id="hTh">—</span></div>
+    <div class="row"><span class="k">GIMBAL</span><span class="v" id="hGi">—</span></div>
+    <div class="row"><span class="k">THROTTLE</span><span class="v" id="hU">—</span></div>
+    <div class="row"><span class="k">FUEL</span><span class="v" id="hFuel">—</span></div>
+    <div class="bar fuel"><i id="fuelBar"></i></div>
+  </div>
+  <div class="panel tr">
+    <div class="brand">TELEMETRY</div>
+    <div class="sub" id="apLabel">autopilot armed</div>
+    <div class="row"><span class="k">T+</span><span class="v" id="hT">00:00.0</span></div>
+    <div class="row"><span class="k">MASS</span><span class="v" id="hM">—</span></div>
+    <div class="row"><span class="k">T/W</span><span class="v" id="hTW">—</span></div>
+    <div class="row"><span class="k">ω</span><span class="v" id="hOm">—</span></div>
+    <div class="row"><span class="k">H<sub>SB</sub></span><span class="v" id="hSb">—</span></div>
+    <div class="row"><span class="k">CAM</span><span class="v" id="hCam">FOLLOW</span></div>
+  </div>
+  <div class="panel bl">
+    <div class="help">
+      <b>W/S</b> throttle &nbsp; <b>IJKL</b> or arrows gimbal<br/>
+      <b>Space</b> autopilot &nbsp; <b>R</b> reset &nbsp; <b>P</b> pause &nbsp; <b>C</b> camera<br/>
+      Drag orbit · scroll zoom · manual keys dismiss AP
+    </div>
+  </div>
+  <div class="panel br">
+    <div class="btns">
+      <button id="btnReset">Reset</button>
+      <button id="btnPause">Pause</button>
+      <button id="btnAp" class="on">Autopilot</button>
+      <button id="btnPerfect">Perfect</button>
+      <button id="btnNormal" class="on">Normal</button>
+      <button id="btnHard">Hard</button>
+      <button id="btnFollow" class="on">Follow</button>
+      <button id="btnChase">Chase</button>
+      <button id="btnPad">Pad</button>
+    </div>
+  </div>
+  <div class="banner" id="banner">
+    <div class="big" id="bannerBig"></div>
+    <div class="why" id="bannerWhy"></div>
+  </div>
+</div>
+<script src="https://unpkg.com/three@0.160.1/build/three.min.js"></script>
+<script src="sim.js"></script>
+</body>
+</html>

@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Landing a Falcon 9 First Stage — Annotated</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />
+</head>
+<body>
+<div class="wrap">
+<nav class="toc" aria-label="Sections">
+<div class="brand brand-ann">Annotated · code</div>
+<h1>Falcon 9 first-stage landing</h1>
+<a class="edition-link" href="../Tutorial/index.html">Original essay →</a>
+<ol>
+<li><a href="#why">1. Why this is hard</a></li>
+<li><a href="#timeline">2. Mission timeline</a></li>
+<li><a href="#pendulum">3. Inverted pendulum</a></li>
+<li><a href="#suicide">4. Vertical channel</a></li>
+<li><a href="#gnc">5. GNC</a></li>
+<li><a href="#aero">6. Aero and grid fins</a></li>
+<li><a href="#prop">7. Propulsion</a></li>
+<li><a href="#structures">8. Structures</a></li>
+<li><a href="#fuel">9. Fuel and margins</a></li>
+<li><a href="#sim">10. The 2D sim</a></li>
+<li><a href="#sources">Sources</a></li>
+</ol>
+<div class="chip-index">
+<div class="lab">Open a snippet</div>
+<button type="button" data-snippet="constants">constants</button>
+<button type="button" data-snippet="state">s / spawnIC</button>
+<button type="button" data-snippet="hCom">hCom</button>
+<button type="button" data-snippet="inertia">inertia</button>
+<button type="button" data-snippet="rho">rho</button>
+<button type="button" data-snippet="thrust">Tx, Tz</button>
+<button type="button" data-snippet="moment">M = ℓ T sin δ</button>
+<button type="button" data-snippet="mdot">ṁ</button>
+<button type="button" data-snippet="integrator">Euler / 300 Hz</button>
+<button type="button" data-snippet="hsb">h_sb</button>
+<button type="button" data-snippet="coastSlam">coast / slam</button>
+<button type="button" data-snippet="attitude">PD / NDI</button>
+<button type="button" data-snippet="landing">gear / RUD</button>
+<button type="button" data-snippet="aero">aero extras</button>
+<button type="button" data-snippet="stepPhysics">stepPhysics</button>
+<button type="button" data-snippet="guidance">guidance()</button>
+</div>
+<p class="src">Same night notebook as the original essay. Amber chips open the exact JS from the 2D trainer. Deep-link: <code>#code-hsb</code> or <code>?code=stepPhysics</code>.</p>
+</nav>
+<main>
+<header class="hero">
+<div class="kicker kicker-ann">Annotated · code <span>/ science / math / engineering</span></div>
+<h1>Landing a Falcon 9 first stage</h1>
+<p class="dek">The original essay, with every important equation wired to the line of JavaScript that <em>is</em> that equation in the 2D trainer. Same plant. Same night notebook. No prettier fake physics.</p>
+<div class="meta">August 2026 · companion to the original tutorial · snippets from sim/index.html</div>
+<div class="edition-bar">
+  <a href="../Tutorial/index.html">Original essay →</a>
+  <a href="sim/index.html">Open the 2D sim →</a>
+  <a href="ANNOTATED.md">How to use this edition</a>
+</div>
+<p class="folder-note">The two folders are meant to sit side by side. If you unzipped only this one, the original-essay link will 404 — open <code>ANNOTATED.md</code>.</p>
+</header>
+
+<p class="lead">Tommy — you liked the essay. This is the annotated twin: same story, same equations, and a chip beside each one that pops the actual implementation. The chips do not rewrite the math. They quote <code>sim/index.html</code>, a verbatim copy of the landing trainer. Click a chip, read the mapping note (θ → <code>s.theta</code>, T → <code>u*TMAX</code>, ℓ → <code>hCom(s.m)</code>), then “View in sim source” if you want the function in the living file.</p>
+
+<p>The original pages are untouched. This edition condenses a little so the math-to-code joint stays in front. Public numbers stay tagged the same way: <strong>official</strong> (User’s Guide Rev. 8 / vehicle page) vs <strong>unofficial</strong>.</p>
+
+<h2 id="why">1. Why this is hard</h2>
+<p>An airplane landing converts kinetic energy into lift, drag, and rolling friction. The vehicle is already the right way up. A Falcon 9 first stage arriving at a pad is a slender, almost-empty tube falling engines-first toward a concrete disk. No wings. Grid fins are control surfaces, not a lifting body. Nine Merlins were sized for a 549-tonne stack, not for hovering ~25 t of dry booster. The landing burn is a late commit: light too late and you hit; light too early and the engine, which cannot throttle to weight, lofts you back into the air.</p>
+<p>Mechanically it is an inverted pendulum with the hinge at the engine gimbal and the mass above it. Open-loop upright thrust does not stabilize it. You must keep the thrust vector under the center of mass, or the horizontal acceleration from any lean integrates twice into a miss, then a tip-over.</p>
+<p>The trainer you already have is that plant with most of the clothing stripped off. It starts at terminal descent — not MECO, not boostback. The chips below map the essay onto that file, not onto a fictional GNC stack.</p>
+
+<h2 id="timeline">2. The mission timeline</h2>
+<p>What each burn is <em>buying</em> matters more than the clock. The 2D trainer begins after the last of these, with a few kilometers of altitude and a suicide-burn problem already on the table.</p>
+<div class="fig"><pre class="mermaid">
+%%{init: {'theme':'dark'}}%%
+flowchart LR
+  A["Liftoff<br/>9 Merlins"] --> B["MECO<br/>~T+2.5 min"]
+  B --> C["Sep + flip<br/>N2 RCS"]
+  C --> D{"RTLS?"}
+  D -->|yes| E["Boostback<br/>3 engines"]
+  D -->|"ASDS often short/none"| F["Coast"]
+  E --> F
+  F --> G["Entry burn<br/>usually 3"]
+  G --> H["Grid-fin aero<br/>hypersonic to subsonic"]
+  H --> I["Landing burn<br/>3-to-1 or 1"]
+  I --> J["Legs + touchdown"]
+</pre><p class="cap">Figure 1. Recovery timeline. Boostback is an RTLS tax; many ASDS profiles shorten or omit it.</p></div>
+<table>
+<thead><tr><th>Burn</th><th>Buys</th></tr></thead>
+<tbody>
+<tr><td>Ascent</td><td>Orbital energy for the stack</td></tr>
+<tr><td>Boostback</td><td>A landing site that is not under the ascent IIP</td></tr>
+<tr><td>Entry</td><td>Peak heating and $q$ the aft bay and fins can survive</td></tr>
+<tr><td>Grid-fin glide</td><td>Crossrange / downrange steering without spending propellant</td></tr>
+<tr><td>Landing</td><td>$v \to 0$ at $z \to 0$, with the stick still upright</td></tr>
+</tbody>
+</table>
+<p class="note not-in-sim"><strong>Not in the 2D trainer.</strong> Boostback, entry burn, 3-to-1, RCS flip, and TEA-TEB restarts are not modeled. The sim is a single-engine terminal descent: <button type="button" class="code-chip inline" data-snippet="spawnIC"><span class="chip-ico">{ }</span> spawnIC</button> draws $(x,z,v_x,v_z,\theta,\omega,m)$ a few kilometers up, then <button type="button" class="code-chip inline" data-snippet="guidance"><span class="chip-ico">{ }</span> guidance</button> flies the last burn.</p>
+
+<h2 id="pendulum">3. The inverted pendulum</h2>
+<p>This is the conceptual core, and it is what the trainer actually integrates.</p>
+
+<h3>3.1 States and geometry</h3>
+<p>Work in a plane. Origin at the intended touchdown point, $+x$ horizontal, $+z$ up. The engine gimbal sits a distance $\ell$ below the center of mass. $\theta$ is body angle from vertical, positive when the nose leans toward $+x$. $\delta$ is gimbal angle, positive when the thrust vector rotates from the body axis toward $+x$.</p>
+<p>Seven states:</p>
+<div class="eq-block">
+  <div class="eq">$$
+\mathbf{s} = \bigl(x,\; z,\; v_x,\; v_z,\; \theta,\; \omega,\; m\bigr)
+$$</div>
+  <div class="eq-actions">
+    <button type="button" class="code-chip" data-snippet="state"><span class="chip-ico">{ }</span> s</button>
+    <button type="button" class="code-chip" data-snippet="spawnIC"><span class="chip-ico">{ }</span> spawnIC</button>
+  </div>
+</div>
+<p>In the file that object is literally <code>s = {x, z, vx, vz, theta, omega, m}</code>. Controls are $T(t)=u\cdot T_{\max}$ and $\delta(t)$, both bounded.</p>
+<div class="fig"><pre class="mermaid">
+%%{init: {'theme':'dark'}}%%
+flowchart TB
+  N["Interstage / grid fins"] --- COM((CM))
+  COM --- G["Engine gimbal"]
+  G --> Tx["Tx = T sin(theta+delta)"]
+  G --> Tz["Tz = T cos(theta+delta)"]
+  COM --> W["mg"]
+  G --> M["M = ell T sin(delta)"]
+</pre><p class="cap">Figure 2. Planar free-body. Thrust is applied at the gimbal; weight at the CM; moment is r cross T.</p></div>
+<p>COM height is not a constant. Fuel fraction walks $\ell$ from $0.40L$ (wet landing load) to $0.45L$ (dry):</p>
+<div class="eq-block">
+  <div class="eq">$$
+\ell(m) = L\bigl(0.45 - 0.05\,\mathrm{frac}\bigr),\quad \mathrm{frac}=\mathrm{clamp}\bigl((m-m_{\mathrm{dry}})/m_{\mathrm{fuel0}},\,0,1\bigr)
+$$</div>
+  <div class="eq-actions">
+    <button type="button" class="code-chip" data-snippet="hCom"><span class="chip-ico">{ }</span> hCom</button>
+    <button type="button" class="code-chip" data-snippet="inertia"><span class="chip-ico">{ }</span> inertia</button>
+  </div>
+</div>
+<p>Inertia is a rod of length $L$ about a COM that is not at $L/2$: $I = m\bigl(L^2/12 + (L/2-\ell)^2\bigr)$. Atmosphere is a one-line exponential, $\rho = 1.225\,\exp(-z/8500)$.</p>
+<div class="eq-actions" style="margin-bottom:1.1rem">
+  <button type="button" class="code-chip" data-snippet="rho"><span class="chip-ico">{ }</span> rho</button>
+  <button type="button" class="code-chip" data-snippet="constants"><span class="chip-ico">{ }</span> constants</button>
+</div>
+
+<h3>3.2 Translation and the moment $M=\mathbf{r}\times\mathbf{T}$</h3>
+<p>Thrust points out the nose when $\delta=0$. In components:</p>
+<div class="eq-block">
+  <div class="eq">$$
+\begin{aligned}
+T_x &= T\sin(\theta+\delta) \\
+T_z &= T\cos(\theta+\delta).
+\end{aligned}
+$$</div>
+  <div class="eq-actions">
+    <button type="button" class="code-chip" data-snippet="thrust"><span class="chip-ico">{ }</span> ang, Fx, Fz</button>
+    <button type="button" class="code-chip" data-snippet="throttle"><span class="chip-ico">{ }</span> T = u TMAX</button>
+  </div>
+</div>
+<p>Newton, with gravity and an optional aero force:</p>
+<div class="eq-block">
+  <div class="eq">$$
+\begin{aligned}
+m\dot v_x &= T\sin(\theta+\delta) + F_{a,x} \\
+m\dot v_z &= T\cos(\theta+\delta) - mg + F_{a,z} \\
+\dot m &= -\frac{T}{I_{\mathrm{sp}}\,g_0}.
+\end{aligned}
+$$</div>
+  <div class="eq-actions">
+    <button type="button" class="code-chip" data-snippet="stepPhysics"><span class="chip-ico">{ }</span> stepPhysics</button>
+    <button type="button" class="code-chip" data-snippet="mdot"><span class="chip-ico">{ }</span> ṁ</button>
+  </div>
+</div>
+<p>The gimbal is at $\mathbf{r}_{G/\mathrm{cm}}=\ell(-\sin\theta,\,-\cos\theta)$. The 2-D moment about the CM collapses to</p>
+<div class="eq-block">
+  <div class="eq">$$
+M = \ell T\sin\delta
+$$</div>
+  <div class="eq-actions">
+    <button type="button" class="code-chip" data-snippet="moment"><span class="chip-ico">{ }</span> M = hc * T * sin(delta)</button>
+  </div>
+</div>
+<p>The essay writes $I\dot\omega=-\ell T\sin\delta$ from a geometry sign on $+\delta$. The sim uses <code>M = hc * T * Math.sin(delta)</code> then <code>omega += (M/I)*dt</code>. Same lever; the sign is absorbed when the PD later inverts the gimbal. For small $\delta$, $\sin\delta\approx\delta$ and $I\dot\omega \approx \ell T\,\delta$ in the sim’s convention.</p>
+<p>Gimbal is not a pure attitude effector. The same $\delta$ that makes a moment also steals a slice of $T$ into the horizontal channel — which is why <code>stepPhysics</code> applies $T$ at the tail, not as a couple plus a force at the CM.</p>
+
+<details class="inline-code">
+<summary>stepPhysics — the whole plant, 36 lines</summary>
+<p class="code-note">Opens the same snippet as the chip. Velocity is updated before position (semi-implicit Euler). Mass burns last.</p>
+<p><button type="button" class="code-chip" data-snippet="stepPhysics"><span class="chip-ico">{ }</span> open stepPhysics</button>
+<button type="button" class="code-chip" data-snippet="integrator"><span class="chip-ico">{ }</span> integrator lines</button>
+<button type="button" class="code-chip" data-snippet="physHz"><span class="chip-ico">{ }</span> PHYS_HZ</button></p>
+</details>
+
+<h3>3.3 Why open-loop upright thrust is unstable</h3>
+<p>Park at hover: $T=mg$, $\theta=0$, $\delta=0$. Linearize:</p>
+<div class="eq">$$
+\ddot x = g\,(\theta + \delta), \qquad \ddot\theta = -\frac{mg\ell}{I}\,\delta.
+$$</div>
+<p class="note not-in-sim"><strong>Implied, not coded.</strong> There is no linearized plant object. Freeze <code>deltaCmd = 0</code> in the living sim with a small <code>s.theta</code> and you will watch $x$ run away while $\theta$ sits — the sanity check in the trainer README. Constrain the tail to $x=0$ and the poles sit at $\pm\sqrt{g/\ell}$.</p>
+<p>A 1° lean at $g$ is about $0.17\,\mathrm{m/s}^2$. In ten seconds that is 8.5 m of position. You have left the pad. Adding the task “keep the engine over the X” produces the broomstick:</p>
+<div class="eq">$$
+\ddot\theta - \frac{g}{\ell}\theta = 0.
+$$</div>
+<p>For $\ell$ of order 17–19 m (the sim’s <code>hCom</code>), the unstable time constant is about 1.3 s.</p>
+
+<h3>3.4 Attitude command from desired acceleration</h3>
+<p>Guidance asks for a vector acceleration. The inner loop should point the rocket so that</p>
+<div class="eq">$$
+\frac{T}{m}\,\hat e_T - g\hat z \approx \mathbf{a}_{\mathrm{cmd}}, \qquad \hat e_T \parallel \mathbf{a}_{\mathrm{cmd}} + g\hat z.
+$$</div>
+<p>The closed form in the plane is $\theta_{\mathrm{cmd}}=\mathrm{atan2}(a_{x,\mathrm{cmd}},\,a_{z,\mathrm{cmd}}+g)$. The trainer implements the same idea as a small commanded tilt that kills $v_x$ and walks $x$ back, then inverts $M=\ell T\sin\delta$ for $\delta$:</p>
+<div class="eq-block">
+  <div class="eq">$$
+\theta_{\mathrm{cmd}} = \mathrm{clamp}(-k_v v_x - k_x x), \qquad
+\delta = \frac{I\,\alpha_{\mathrm{des}}}{\ell\,T}
+$$</div>
+  <div class="eq-actions">
+    <button type="button" class="code-chip" data-snippet="attitude"><span class="chip-ico">{ }</span> PD / NDI</button>
+  </div>
+</div>
+
+<h2 id="suicide">4. Vertical channel / suicide burn</h2>
+<p>Ignore attitude for a page. The vertical channel is a double integrator with a bounded, strictly positive acceleration. That bound is why SpaceX does not hover the last kilometer.</p>
+
+<h3>4.1 T/W and the throttle floor</h3>
+<p>Official Merlin 1D sea-level thrust is 845 kN. The User’s Guide throttle band is 190,000 → 108,300 lbf (~57%). Unofficial dry mass ~25,600 kg. At that mass, official minimum thrust is still T/W $\approx 1.9$. <strong>One Merlin at minimum throttle still lifts an almost-empty booster.</strong> You cannot hover. You can only pass through hover.</p>
+<p>The trainer is honest about the high T/W and dishonest about the floor: $u\in[0,1]$ with no $T_{\min}$. Dry T/W is $T_{\max}/(m_{\mathrm{dry}}g)\approx 3.37$. That is why a late light or a stuck-high throttle is unsurvivable, and why the hover-slam exists.</p>
+<div class="eq-actions" style="margin-bottom:1.1rem">
+  <button type="button" class="code-chip" data-snippet="constants"><span class="chip-ico">{ }</span> TMAX, M_DRY, ISP</button>
+</div>
+
+<h3>4.2 Constant-thrust ignition altitude</h3>
+<p>Double integrator, downward speed $V=-v_z>0$ at height $h$, constant $a=T/m>g$, want $(z,v_z)=(0,0)$:</p>
+<div class="eq-block">
+  <div class="eq">$$
+h_\star = \frac{V^2}{2(a-g)}.
+$$</div>
+  <div class="eq-actions">
+    <button type="button" class="code-chip" data-snippet="hsb"><span class="chip-ico">{ }</span> h_sb</button>
+  </div>
+</div>
+<p>The sim is that formula plus three honest fudges, not a different theory: leftover $v_x$ and $|x|$, a 1.06 scale, and +12 m of pad so the last tens of meters can throttle down. $V_{\mathrm{land}}=-1.3\,\mathrm{m/s}$ sits in the numerator so the target is a walking-pace slam, not a dead stop in the air. $V\to$ <code>vDown = max(-s.vz, 0)</code>, $a-g\to$ <code>aMaxNet</code>.</p>
+<p>Coast until $h\le h_{\mathrm{sb}}$, then slam. If the burn kills speed well above the deck, cut and fall — do not hover at 150 m.</p>
+<div class="eq-block">
+  <div class="eq">$$
+u = 0 \text{ until } h \le h_{\mathrm{sb}},\quad \text{then solve } a_{\mathrm{net}} = (v_z^2 - V_{\mathrm{land}}^2)/(2h)
+$$</div>
+  <div class="eq-actions">
+    <button type="button" class="code-chip" data-snippet="coastSlam"><span class="chip-ico">{ }</span> coast / slam</button>
+  </div>
+</div>
+
+<h3>4.3 Dead time — and why they do not hover the last kilometer</h3>
+<p>Real ignition is not a step. Chilldown, TEA-TEB, turbopump spin-up, and thrust rise eat time. Guidance must fire <em>early</em> by that dead time, or $h_\star$ is a lie.</p>
+<p class="note not-in-sim"><strong>Not in the 2D trainer.</strong> $T$ is an instantaneous knob. There is no first-order lag and no $T_{\min}$. The hover-slam still exists because dry T/W $\gg 1$: the last ~30 m tracks a sinking $v_z$ into about $-1.2\,\mathrm{m/s}$ at the gear, then cuts. A hover is $T=W$, $v=0$, $z=\mathrm{const}$. A hoverslam is $T>W$ almost all the way, $v=0$ only at $z=0$.</p>
+
+<h2 id="gnc">5. Guidance, navigation, and control</h2>
+<p>Three different jobs. The trainer collapses navigation to omniscient state, guidance to <code>guidance()</code>, and control to a gimbal/fin command that <code>stepPhysics</code> consumes on the next 1/300 s tick.</p>
+<div class="fig"><pre class="mermaid">
+%%{init: {'theme':'dark'}}%%
+flowchart LR
+  S["Sensors<br/>IMU GPS radar"] --> N["Navigation<br/>state estimate"]
+  N --> G["Guidance<br/>trajectory / a_cmd"]
+  G --> C["Control<br/>TVC fins RCS"]
+  C --> P["Plant<br/>rigid body + aero + thrust"]
+  P --> S
+</pre><p class="cap">Figure 3. GNC loop. Navigation estimates; guidance plans; control tracks.</p></div>
+
+<h3>5.1 Navigation — where am I?</h3>
+<p>Official Falcon avionics: three-string computers, GPS, IMUs. A radar altimeter is the obvious way to get height above a heaving deck; it is not in the User’s Guide data sheet.</p>
+<p class="note not-in-sim"><strong>Not in the 2D trainer.</strong> No IMU, no GPS noise, no Kalman filter. <code>guidance()</code> reads <code>s</code> directly. The honest upgrade is an estimator on $(x,z,v_x,v_z,\theta,\omega)$ with noisy IMU and occasional altimeter updates.</p>
+
+<h3>5.2 Guidance — where should I go?</h3>
+<p>The papers to actually read are the JPL / Caltech powered-descent sequence (Açıkmeşe, Ploen, Blackmore, Scharf, Carson — see Sources). The structural fact they convexify is the thrust annulus</p>
+<div class="eq">$$
+T_{\min} \le \lVert\mathbf{T}\rVert \le T_{\max},
+$$</div>
+<p>which is nonconvex. Lossless convexification introduces a slack $\Gamma$ and replaces the annulus with a second-order cone. G-FOLD flew that theory on Masten’s Xombie in 2013. Lars Blackmore later ran Falcon 9 EDL at SpaceX. It is honest to say the theory was sitting in the building. It is not honest to say “Falcon 9 flies G-FOLD.”</p>
+<p class="note not-in-sim"><strong>Not in the 2D trainer.</strong> No SOCP, no annulus, no pointing cone. The guidance ladder is exactly the one the original essay recommended first: $h_\star$ on the vertical channel, a PD on $x$ that commands $\theta$, then an NDI invert for $\delta$.</p>
+<div class="eq-actions" style="margin-bottom:1.1rem">
+  <button type="button" class="code-chip" data-snippet="hsb"><span class="chip-ico">{ }</span> h_sb</button>
+  <button type="button" class="code-chip" data-snippet="coastSlam"><span class="chip-ico">{ }</span> phase</button>
+  <button type="button" class="code-chip" data-snippet="attitude"><span class="chip-ico">{ }</span> θ_cmd / δ</button>
+  <button type="button" class="code-chip" data-snippet="guidance"><span class="chip-ico">{ }</span> full guidance()</button>
+</div>
+
+<h3>5.3 Control — make the vehicle do that</h3>
+<ul>
+<li><strong>TVC inner loop.</strong> Implemented: $\delta$ tracks $\theta_{\mathrm{cmd}}$ and damps $\omega$ via the NDI invert above. Official first-stage TVC is powered by high-pressure RP-1, not a separate hydraulic fluid.</li>
+<li><strong>Grid fins.</strong> Implemented as a $q$-proportional moment, dead when $q\to 0$. See §6.</li>
+<li><strong>N2 RCS.</strong> Official coast / recovery actuator. <em>Not in the trainer.</em></li>
+</ul>
+
+<h2 id="aero">6. Aero and grid fins</h2>
+<p>From entry burn to landing burn the stage is an unpowered reentry vehicle. Mach goes hypersonic → transonic → subsonic. SpaceX’s vehicle page is explicit: the fins “orient the rocket during reentry by moving the center of pressure.”</p>
+<p>A Falcon first stage flying engines-first has a heavy aft end. The fins sit at the forward end — which, engines-first, is the trailing end. They pull $x_{\mathrm{cp}}$ aft of the CM so the stage weathercocks engines-into-the-wind.</p>
+<table>
+<thead><tr><th></th><th>Grid fins</th><th>TVC</th></tr></thead>
+<tbody>
+<tr><td>Needs atmosphere / $q$</td><td>Yes</td><td>No</td></tr>
+<tr><td>Needs an engine running</td><td>No</td><td>Yes</td></tr>
+<tr><td>Authority as $v\to 0$</td><td>Vanishes</td><td>Full</td></tr>
+<tr><td>Between entry cutoff and landing ignition</td><td>Primary steering</td><td>Dead</td></tr>
+</tbody>
+</table>
+<p>The essay’s suggested fin model is $M_{\mathrm{fin}}=q S_{\mathrm{ref}} c\,C_m(\alpha,\delta_{\mathrm{fin}})$. What the 2D sim actually adds — label this as extra clothing on the vacuum pendulum — is quadratic drag plus two moment terms:</p>
+<div class="eq-block">
+  <div class="eq">$$
+D = \tfrac12\rho v^2 C_D A,\qquad
+M_{\mathrm{aero}} = -q A L\cdot 0.05\sin\alpha + q\cdot 16\cdot \delta_{\mathrm{fin}}
+$$</div>
+  <div class="eq-actions">
+    <button type="button" class="code-chip" data-snippet="aero"><span class="chip-ico">{ }</span> aero + fins</button>
+    <button type="button" class="code-chip" data-snippet="rho"><span class="chip-ico">{ }</span> rho</button>
+  </div>
+</div>
+<p>$C_D A$ is intentionally small so the gimbal story stays in front. There is no Mach table, no CP walk, no transonic hinge-moment spike. Authority dies with $q$. Do not count on aero in the last second.</p>
+
+<h2 id="prop">7. Propulsion constraints that shape the landing</h2>
+<p>Merlin 1D is a gas-generator, pintle-injected, LOX/RP-1 engine. Official: 845 kN sea-level, restart yes, throttle yes, TVC from the high-pressure RP-1 circuit. The pintle is the same family as the Apollo LM descent engine. The landing burn is a sea-level burn — that is why the center engine, not MVac, lands the booster.</p>
+<p>Observed landings often light 3-to-1: center plus two outboards, then the center alone. Three engines give high $a$ while the vehicle is still heavy; one center engine is the lowest $T$ they can get near the deck.</p>
+<p class="note not-in-sim"><strong>Not in the 2D trainer.</strong> Pintle stability, TEA-TEB, chilldown, 3-to-1, ullage/settling, and engine-out are not modeled. $T$ is <code>u * TMAX</code> on one engine, or zero when fuel $\le 1\,\mathrm{kg}$. Use the constants chip for the numbers the plant <em>does</em> believe, and the throttle chip for the gate.</p>
+<div class="eq-actions" style="margin-bottom:1.1rem">
+  <button type="button" class="code-chip" data-snippet="constants"><span class="chip-ico">{ }</span> TMAX, ISP, masses</button>
+  <button type="button" class="code-chip" data-snippet="throttle"><span class="chip-ico">{ }</span> throttle gate</button>
+  <button type="button" class="code-chip" data-snippet="mdot"><span class="chip-ico">{ }</span> ṁ</button>
+</div>
+
+<h2 id="structures">8. Structures and mechanisms</h2>
+<p>This is your section in the original essay — loads, paths, free bodies. The trainer does not integrate a crush core. It integrates a rigid body and then applies a gate at contact.</p>
+<h3>8.1 Airframe and legs</h3>
+<p>Official architecture: Al-Li tanks, common dome, LOX transfer tube, octaweb, composite interstage, four fins, four legs. Legs are carbon fiber over aluminum honeycomb, helium-deployed, with a replaceable honeycomb crush core that caps the load into the octaweb. They latch. They are not a servoed oleo.</p>
+<p>In the sim the legs are a visual <code>legsDeploy</code> blend that starts when <code>feetZ</code> is under 450 m or the landing burn is already on. No stroke, no fuse, no one-leg-first hit.</p>
+
+<h3>8.2 Free-body of a leg at touchdown</h3>
+<p>The essay’s tip-over moment about the first contact pad is</p>
+<div class="eq">$$
+M_{\mathrm{tip}} = mg\cdot x_{\mathrm{cm}} + m\dot v_x\cdot h_{\mathrm{cm}}, \qquad x_{\mathrm{cm}}\approx h_{\mathrm{cm}}\theta + x_{\mathrm{pad}}.
+$$</div>
+<p class="note not-in-sim"><strong>Not in the 2D trainer.</strong> That free-body is not computed. Contact is <code>feetZ(s) ≤ 0</code>, the COM is snapped to the deck, and a gate decides LZ-1 or RUD: $|v_z|\le 4$, $|\theta|\le 9°$, $|x|\le 24\,\mathrm{m}$, $|v_x|\le 3$, $|\omega|\le 40°/\mathrm{s}$.</p>
+<div class="eq-block">
+  <div class="eq">$$
+z_{\mathrm{feet}} = z - \ell\cos\theta - L_{\mathrm{leg}}
+$$</div>
+  <div class="eq-actions">
+    <button type="button" class="code-chip" data-snippet="feetZ"><span class="chip-ico">{ }</span> feetZ</button>
+    <button type="button" class="code-chip" data-snippet="evaluateContact"><span class="chip-ico">{ }</span> evaluateContact</button>
+    <button type="button" class="code-chip" data-snippet="landing"><span class="chip-ico">{ }</span> contact + RUD</button>
+  </div>
+</div>
+
+<h2 id="fuel">9. Fuel, margins, and the tyranny of the last 30 seconds</h2>
+<p>The rocket equation does not care that you are close to home:</p>
+<div class="eq-block">
+  <div class="eq">$$
+\Delta v = I_{\mathrm{sp}}\,g_0\ln\frac{m_0}{m_f}.
+$$</div>
+  <div class="eq-actions">
+    <button type="button" class="code-chip" data-snippet="mdot"><span class="chip-ico">{ }</span> integrated ṁ</button>
+  </div>
+</div>
+<p>The sim never evaluates that logarithm. It integrates <code>s.m -= T/(ISP*G0)*dt</code> every substep. Same physics; the closed form is what you use on a whiteboard for a 300 m/s burn (~12% of landing mass at 282 s).</p>
+<p>Unofficial Merlin SL $I_{\mathrm{sp}}\approx 282\,\mathrm{s}$ — and that is the number in the const block. A one-second argument with the vertical channel is $T/(I_{\mathrm{sp}}g_0)\approx 0.3\,\mathrm{t/s}$ at full throttle. Fuel is time. Differentiate $h_\star$:</p>
+<div class="eq">$$
+\mathrm{d}h_\star = \frac{V}{a-g}\,\mathrm{d}V.
+$$</div>
+<p>Every extra 10 m/s of residual speed at the fin handoff is tens of meters of ignition altitude. Hard mode in <code>spawnIC</code> cuts the landing load to 5000 kg and widens the box — the intended “fuel-limited” feel.</p>
+
+<h2 id="sim">10. What a 2D sim gets right, and what it lies about</h2>
+<p>Build the planar rigid body in §3. Close a nested loop on $\delta$ and a suicide-burn switch on $T$. You now own the problem that actually lands the rocket. Everything else is clothing.</p>
+<p>Equation-to-function map, all wired:</p>
+<table class="map-table">
+<thead><tr><th>Essay</th><th>Sim</th><th>Chip</th></tr></thead>
+<tbody>
+<tr><td>$\mathbf{s}=(x,z,v_x,v_z,\theta,\omega,m)$</td><td><code>s</code> + <code>spawnIC</code></td><td><button type="button" class="code-chip inline" data-snippet="state">s</button></td></tr>
+<tr><td>$\ell(m)$</td><td><code>hCom(m)</code></td><td><button type="button" class="code-chip inline" data-snippet="hCom">hCom</button></td></tr>
+<tr><td>$I(m)$</td><td><code>inertia(m)</code></td><td><button type="button" class="code-chip inline" data-snippet="inertia">inertia</button></td></tr>
+<tr><td>$\rho(z)$</td><td><code>rho(z)</code></td><td><button type="button" class="code-chip inline" data-snippet="rho">rho</button></td></tr>
+<tr><td>$T_x,T_z$</td><td><code>ang = theta+delta</code>, <code>Fx</code>, <code>Fz</code></td><td><button type="button" class="code-chip inline" data-snippet="thrust">thrust</button></td></tr>
+<tr><td>$M=\ell T\sin\delta$</td><td><code>M = hc * T * sin(delta)</code></td><td><button type="button" class="code-chip inline" data-snippet="moment">moment</button></td></tr>
+<tr><td>$\dot m=-T/(I_{\mathrm{sp}}g_0)$</td><td><code>s.m -= T/(ISP*G0)*dt</code></td><td><button type="button" class="code-chip inline" data-snippet="mdot">mdot</button></td></tr>
+<tr><td>Semi-implicit Euler, 300 Hz</td><td><code>PHYS_HZ</code>, velocity then position</td><td><button type="button" class="code-chip inline" data-snippet="integrator">Euler</button></td></tr>
+<tr><td>$h_\star=V^2/(2(T/m-g))$</td><td><code>hSb</code> inside <code>guidance()</code></td><td><button type="button" class="code-chip inline" data-snippet="hsb">h_sb</button></td></tr>
+<tr><td>Coast then slam</td><td><code>apMem.burn</code> phase logic</td><td><button type="button" class="code-chip inline" data-snippet="coastSlam">coast</button></td></tr>
+<tr><td>$\theta_{\mathrm{cmd}}$, gimbal invert</td><td>PD / NDI + <code>delta</code></td><td><button type="button" class="code-chip inline" data-snippet="attitude">attitude</button></td></tr>
+<tr><td>Gear / success</td><td><code>feetZ</code> + <code>evaluateContact</code></td><td><button type="button" class="code-chip inline" data-snippet="landing">landing</button></td></tr>
+<tr><td>Constants</td><td>const block</td><td><button type="button" class="code-chip inline" data-snippet="constants">const</button></td></tr>
+<tr><td>Grid-fin / aero extras</td><td>drag + $M_{\mathrm{aero}}$ in <code>stepPhysics</code></td><td><button type="button" class="code-chip inline" data-snippet="aero">aero</button></td></tr>
+</tbody>
+</table>
+<p><strong>What the trainer gets right:</strong> inverted-pendulum poles; gimbal as a coupled translator-and-rotator; $T/W\gg 1$ and the existence of $h_\star$; a commanded tilt that puts $T$ under the CM; fuel as a clock.</p>
+<p><strong>What it lies about</strong> (and when the original essay said to add each lie back): no roll/yaw; tiny aero; no slosh; rigid; no wind; instant engine; perfect state; fixed pad; point-mass fuel. Map onto the trainer in that order. If you add slosh before the broomstick poles are visible, you will tune slosh and miss the plant.</p>
+<p>A Falcon 9 landing is not magic and it is not a PID meme. It is a rigid body with the mass on the wrong end of the stick, an engine that cannot whisper, a set of fins that work until they don’t, and a guidance problem whose convexification is one of the cleaner pieces of applied optimal control of the last twenty years. Your sim only has to tell that story in a plane. The chips are so you can see the story in the file.</p>
+
+<h2 id="sources">Sources</h2>
+<p>Same primary list as the original essay. Actually used:</p>
+<ul>
+<li><a href="https://www.spacex.com/vehicles/falcon-9">SpaceX Falcon 9 vehicle page</a> — height, diameter, mass, payload, Merlin SL 845 kN, grid-fin job.</li>
+<li><a href="https://www.spacex.com/assets/media/falcon-users-guide-2025-05-09.pdf">SpaceX Falcon User’s Guide, Rev. 8, 2025-03</a> — tanks, octaweb, throttle band, TVC-from-RP-1, GN2 ACS, GPS+IMU, fins/legs.</li>
+<li>Açıkmeşe &amp; Ploen, <em>JGCD</em> 30(5), 2007; Blackmore, Açıkmeşe &amp; Scharf, <em>JGCD</em> 33(4), 2010; Açıkmeşe &amp; Blackmore, <em>Automatica</em> 47(2), 2011; Açıkmeşe, Carson &amp; Blackmore, <em>IEEE TCST</em> 21(6), 2013.</li>
+<li><a href="http://larsblackmore.com/losslessconvexification.htm">Lars Blackmore, lossless convexification</a> — G-FOLD / Xombie; F9 EDL 2011–2018.</li>
+<li>The landing trainer itself: <a href="sim/index.html">sim/index.html</a> (copy of <code>rocket-landing/index.html</code>) and its README. Every chip is a quote from that file.</li>
+</ul>
+<p>The original essay’s full source list and official/unofficial number tags live in the sibling folder: <a href="../Tutorial/index.html">falcon-landing-tutorial</a>.</p>
+<footer>Night notebook, annotated edition. Math via KaTeX. Diagrams via mermaid. Chips quote the 2D trainer — they do not rewrite it. Esc / backdrop / X closes a popout.</footer>
+</main>
+</div>
+
+<div id="code-modal" class="modal-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <header>
+      <div>
+        <div class="modal-kicker">Implementation</div>
+        <h2 id="modal-title">snippet</h2>
+        <div class="modal-meta" id="modal-meta"></div>
+      </div>
+      <button type="button" class="modal-x" id="modal-x" aria-label="Close">×</button>
+    </header>
+    <div class="modal-body">
+      <pre class="hl"><code id="modal-code"></code></pre>
+      <p class="modal-note" id="modal-note"></p>
+      <div class="modal-links">
+        <a id="modal-sim" href="sim/index.html">View in sim source</a>
+        <a href="sim/index.html">Open the 2D sim</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.15.0/mermaid.min.js"></script>
+<script src="snippets.js"></script>
+<script src="render.js" defer="defer"></script>
+</body>
+</html>

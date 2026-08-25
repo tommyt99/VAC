@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>F9 S1 — Terminal Descent</title>
+<style>
+  :root {
+    --bg: #05070c;
+    --cyan: #7af8ff;
+    --amber: #f5c518;
+    --warn: #ff6b35;
+    --ok: #5dffb0;
+    --muted: #8b93a7;
+    --panel: rgba(8, 12, 20, 0.72);
+    --line: rgba(122, 248, 255, 0.22);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: var(--bg);
+    color: #e8edf7;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  }
+  canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+  .hud {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .panel {
+    position: absolute;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 10px 12px 12px;
+  }
+  .tl { top: 16px; left: 16px; min-width: 228px; }
+  .tr { top: 16px; right: 16px; min-width: 200px; text-align: right; }
+  .bl { bottom: 18px; left: 16px; max-width: 340px; }
+  .br { bottom: 18px; right: 16px; pointer-events: auto; }
+  .brand {
+    font-size: 11px; letter-spacing: 0.28em; color: var(--amber);
+    font-weight: 700; margin-bottom: 2px;
+  }
+  .sub {
+    font-size: 10px; letter-spacing: 0.16em; color: var(--muted);
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .row {
+    display: flex; justify-content: space-between; gap: 18px;
+    font-variant-numeric: tabular-nums;
+    font-family: "SF Mono", "Consolas", "Liberation Mono", Menlo, monospace;
+    font-size: 13px; line-height: 1.55;
+  }
+  .k { color: var(--muted); letter-spacing: 0.08em; font-size: 11px; }
+  .v { color: var(--cyan); }
+  .v.warn { color: var(--warn); }
+  .v.ok { color: var(--ok); }
+  .v.amber { color: var(--amber); }
+  .bar {
+    margin-top: 8px; height: 4px; background: rgba(255,255,255,0.08);
+    position: relative; overflow: hidden;
+  }
+  .bar > i { display: block; height: 100%; background: var(--cyan); width: 0%; }
+  .bar.fuel > i { background: linear-gradient(90deg, var(--warn), var(--amber), var(--ok)); }
+  .help {
+    font-size: 11px; line-height: 1.55; color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+  .help b { color: #d5dbe8; font-weight: 600; }
+  .btns { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+  button {
+    pointer-events: auto;
+    background: rgba(122, 248, 255, 0.06);
+    color: var(--cyan);
+    border: 1px solid var(--line);
+    padding: 7px 11px;
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    cursor: pointer; font-family: inherit;
+  }
+  button:hover { background: rgba(122, 248, 255, 0.16); }
+  button.on { border-color: var(--amber); color: var(--amber); }
+  .banner {
+    position: absolute; left: 50%; top: 22%;
+    transform: translateX(-50%);
+    text-align: center; display: none;
+    padding: 18px 28px;
+    border: 1px solid var(--line);
+    background: rgba(6, 8, 14, 0.78);
+    min-width: 320px;
+  }
+  .banner.show { display: block; }
+  .banner .big {
+    font-size: 22px; letter-spacing: 0.28em; font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .banner.ok .big { color: var(--ok); }
+  .banner.bad .big { color: var(--warn); }
+  .banner .why { color: var(--muted); font-size: 12px; letter-spacing: 0.08em; }
+  .vignette {
+    position: fixed; inset: 0; pointer-events: none; z-index: 1;
+    background: radial-gradient(ellipse at 50% 40%, transparent 40%, rgba(0,0,0,0.45) 100%);
+  }
+  .grain {
+    position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="vignette"></div>
+<div class="grain"></div>
+<div class="hud">
+  <div class="panel tl">
+    <div class="brand">LZ-1  ·  FALCON 9 S1</div>
+    <div class="sub" id="phase">terminal descent</div>
+    <div class="row"><span class="k">ALT</span><span class="v" id="hAlt">—</span></div>
+    <div class="row"><span class="k">VZ</span><span class="v" id="hVz">—</span></div>
+    <div class="row"><span class="k">VX</span><span class="v" id="hVx">—</span></div>
+    <div class="row"><span class="k">RANGE</span><span class="v" id="hX">—</span></div>
+    <div class="row"><span class="k">TILT</span><span class="v" id="hTh">—</span></div>
+    <div class="row"><span class="k">GIMBAL</span><span class="v" id="hGi">—</span></div>
+    <div class="row"><span class="k">THROTTLE</span><span class="v" id="hU">—</span></div>
+    <div class="row"><span class="k">FUEL</span><span class="v" id="hFuel">—</span></div>
+    <div class="bar fuel"><i id="fuelBar"></i></div>
+  </div>
+  <div class="panel tr">
+    <div class="brand">TELEMETRY</div>
+    <div class="sub" id="apLabel">autopilot armed</div>
+    <div class="row"><span class="k">T+</span><span class="v" id="hT">00:00.0</span></div>
+    <div class="row"><span class="k">MASS</span><span class="v" id="hM">—</span></div>
+    <div class="row"><span class="k">T/W</span><span class="v" id="hTW">—</span></div>
+    <div class="row"><span class="k">ω</span><span class="v" id="hOm">—</span></div>
+    <div class="row"><span class="k">H<sub>SB</sub></span><span class="v" id="hSb">—</span></div>
+  </div>
+  <div class="panel bl">
+    <div class="help">
+      <b>W/S</b> or ↑↓ throttle &nbsp; <b>A/D</b> or ←→ gimbal<br/>
+      <b>Space</b> autopilot &nbsp; <b>R</b> reset &nbsp; <b>P</b> pause<br/>
+      Manual keys dismiss the autopilot. Stay over the X.
+    </div>
+  </div>
+  <div class="panel br">
+    <div class="btns">
+      <button id="btnReset">Reset</button>
+      <button id="btnPause">Pause</button>
+      <button id="btnAp" class="on">Autopilot</button>
+      <button id="btnPerfect">Perfect</button>
+      <button id="btnNormal" class="on">Normal</button>
+      <button id="btnHard">Hard</button>
+    </div>
+  </div>
+  <div class="banner" id="banner">
+    <div class="big" id="bannerBig"></div>
+    <div class="why" id="bannerWhy"></div>
+  </div>
+</div>
+<script id="sim-src">
+(() => {
+"use strict";
+
+// ---------------------------------------------------------------------------
+// Vehicle (Falcon 9 Block 5 first stage, single-engine landing burn)
+// ---------------------------------------------------------------------------
+/* @anchor fn-constants */
+const G = 9.80665;
+const G0 = 9.80665;
+const ISP = 282;            // s, Merlin 1D sea-level
+const TMAX = 845000;        // N, one Merlin 1D SL
+const L = 42;               // m, stage length
+const M_DRY = 25600;        // kg
+const M_FUEL0 = 5200;       // kg usable landing prop
+const D_BODY = 3.66;        // m
+const A_REF = Math.PI * 1.83 * 1.83;
+const CD = 0.70;
+const DELTA_MAX = 10 * Math.PI / 180;
+const LEG = 2.8;            // m, deployed gear below engine
+const RHO0 = 1.225;
+const H_SCALE = 8500;
+const V_LAND = -1.3;
+const PAD_R = 24;           // m, success radius
+const PHYS_HZ = 300;
+const DT = 1 / PHYS_HZ;
+
+/* @anchor fn-helpers */
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+let W = 0, H = 0, dpr = 1;
+
+function clamp(x, lo, hi) { return x < lo ? lo : x > hi ? hi : x; }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function rand(a, b) { return a + Math.random() * (b - a); }
+function deg(r) { return r * 180 / Math.PI; }
+function wrapPi(a) {
+  while (a > Math.PI) a -= 2 * Math.PI;
+  while (a < -Math.PI) a += 2 * Math.PI;
+  return a;
+}
+
+// COM from the engine: 40% of height when "full" of landing fuel,
+// 45% when dry. Empty COM is higher than full, as specified.
+/* @anchor fn-hCom */
+function hCom(m) {
+  const frac = clamp((m - M_DRY) / M_FUEL0, 0, 1);
+  return L * (0.45 - 0.05 * frac);
+}
+/* @anchor fn-inertia */
+function inertia(m) {
+  const hc = hCom(m);
+  return m * (L * L / 12 + (L / 2 - hc) * (L / 2 - hc));
+}
+/* @anchor fn-rho */
+function rho(z) { return RHO0 * Math.exp(-Math.max(z, 0) / H_SCALE); }
+/* @anchor fn-feetZ */
+function feetZ(s) { return s.z - hCom(s.m) * Math.cos(s.theta) - LEG; }
+
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+/* @anchor fn-state */
+const s = {
+  x: 0, z: 0, vx: 0, vz: 0, theta: 0, omega: 0, m: M_DRY + M_FUEL0
+};
+let uCmd = 0;       // throttle [0,1]
+let deltaCmd = 0;   // gimbal (rad)
+let finCmd = 0;     // grid-fin command [-1,1]
+let apOn = true;
+let paused = false;
+let done = false;
+let outcome = "";
+let outcomeWhy = "";
+let tSim = 0;
+let mode = "normal";
+let apMem = {};
+let lastHsb = 0;
+let lastPhase = "coast";
+let legsDeploy = 0; // 0 stowed … 1 deployed
+let cam = { x: 0, z: 400, mpp: 4 };
+let shake = 0;
+const keys = Object.create(null);
+let manThrottle = 0;
+let manDelta = 0;
+
+const stars = [];
+const particles = [];
+const trail = [];
+
+function resetStars() {
+  stars.length = 0;
+  for (let i = 0; i < 220; i++) {
+    stars.push({
+      x: Math.random(),
+      y: Math.random() * 0.72,
+      r: Math.random() * 1.3 + 0.2,
+      a: 0.35 + Math.random() * 0.65,
+      tw: rand(0.4, 2.2),
+      ph: Math.random() * 6.28
+    });
+  }
+}
+
+/* @anchor fn-spawnIC */
+function spawnIC(kind) {
+  mode = kind || mode;
+  let x, z, vx, vz, th, om, fuel;
+  if (mode === "perfect") {
+    x = 35; z = 1500; vx = 3; vz = -78;
+    th = 1.0 * Math.PI / 180; om = 0; fuel = M_FUEL0;
+  } else if (mode === "hard") {
+    x = rand(-700, 700); z = rand(1800, 2400);
+    vx = rand(-36, 36); vz = rand(-130, -92);
+    th = rand(-11, 11) * Math.PI / 180;
+    om = rand(-6, 6) * Math.PI / 180;
+    fuel = 5000;
+  } else {
+    x = rand(-360, 360); z = rand(1500, 2100);
+    vx = rand(-20, 20); vz = rand(-105, -78);
+    th = rand(-6, 6) * Math.PI / 180;
+    om = rand(-3.2, 3.2) * Math.PI / 180;
+    fuel = M_FUEL0;
+  }
+  s.x = x; s.z = z; s.vx = vx; s.vz = vz;
+  s.theta = th; s.omega = om; s.m = M_DRY + fuel;
+  uCmd = 0; deltaCmd = 0; finCmd = 0;
+  apOn = true; paused = false; done = false;
+  outcome = ""; outcomeWhy = "";
+  tSim = 0; apMem = {}; lastPhase = "coast";
+  legsDeploy = 0; manThrottle = 0; manDelta = 0;
+  particles.length = 0; trail.length = 0;
+  cam.x = s.x * 0.5; cam.z = s.z * 0.5;
+  document.getElementById("banner").className = "banner";
+  syncModeButtons();
+  syncApButton();
+}
+
+// ---------------------------------------------------------------------------
+// Physics
+//
+// States: x (downrange), z (altitude of COM), vx, vz, theta, omega, m.
+// theta = 0 is nose-up / engines-down. +theta tips the nose toward +x.
+//
+// INVERTED PENDULUM
+// The engine sits at the base. The COM is h_com ≈ 17–19 m above it, so
+// thrust is applied at a lever arm. In 2-D the moment about the COM is
+//
+//   r_engine = (-h_com sin θ,  -h_com cos θ)
+//   F        = ( T sin(θ+δ),    T cos(θ+δ) )
+//   M        = r_x F_z − r_z F_x  =  h_com · T · sin(δ)
+//
+// Gravity acts at the COM, so it produces no moment. Open-loop hover
+// (θ = 0, δ = 0, T = mg) is an equilibrium — and it is unstable: any
+// small tilt sends a horizontal acceleration that walks you off the
+// pad, and you have only the same gimbaled vector to both translate
+// and hold attitude. That is the inverted-pendulum landing problem.
+// ---------------------------------------------------------------------------
+/* @anchor fn-stepPhysics */
+function stepPhysics(dt) {
+  const u = clamp(uCmd, 0, 1);
+  const delta = clamp(deltaCmd, -DELTA_MAX, DELTA_MAX);
+  const fuel = s.m - M_DRY;
+  const T = fuel > 1 ? u * TMAX : 0;
+  const hc = hCom(s.m);
+  const I = inertia(s.m);
+  const ang = s.theta + delta;
+
+  let Fx = T * Math.sin(ang);
+  let Fz = T * Math.cos(ang);
+
+  const v = Math.hypot(s.vx, s.vz);
+  if (v > 0.15) {
+    const D = 0.5 * rho(s.z) * v * v * CD * A_REF;
+    Fx -= D * s.vx / v;
+    Fz -= D * s.vz / v;
+  }
+
+  // Gimbal moment (the inverted-pendulum torque) + light aero.
+  let M = hc * T * Math.sin(delta);
+  const aoa = s.theta - Math.atan2(s.vx, -s.vz + 1e-6);
+  const q = 0.5 * rho(s.z) * v * v;
+  M += -q * A_REF * L * 0.05 * Math.sin(aoa);
+  M += q * 16 * clamp(finCmd, -1, 1);
+
+  s.vx += (Fx / s.m) * dt;
+  s.vz += (Fz / s.m - G) * dt;
+  s.omega += (M / I) * dt;
+  s.x += s.vx * dt;
+  s.z += s.vz * dt;
+  s.theta = wrapPi(s.theta + s.omega * dt);
+  if (T > 0) s.m = Math.max(s.m - T / (ISP * G0) * dt, M_DRY);
+
+  return T;
+}
+
+// ---------------------------------------------------------------------------
+// Autopilot
+//
+// SUICIDE BURN / HOVER-SLAM
+// The latest altitude at which max T/W can still kill the sink rate is
+//
+//   h_sb = (vz² − v_land²) / (2 (Tmax/m − g))
+//
+// plus a small extra for leftover horizontal speed and a ~12 m pad so
+// the last tens of meters can throttle down instead of cratering.
+// Coast (u = 0) until h ≤ h_sb, then burn. If the burn kills speed
+// well above the deck, cut and fall — do not hover at 150 m. In the
+// last ~30 m, track a sinking vz profile into ~−1.2 m/s at the gear.
+//
+// Attitude is a PD / NDI loop on θ: command a small tilt that produces
+// the horizontal accel that kills vx and walks x back over the pad,
+// then invert M = h_com T sin(δ) for the gimbal. Grid fins do the
+// same job while the engine is dark.
+// ---------------------------------------------------------------------------
+/* @anchor fn-guidance */
+function guidance() {
+  const h = Math.max(feetZ(s), 0.10);
+  const aMaxNet = Math.max(TMAX / s.m * Math.max(Math.cos(s.theta), 0.75) - G, 1.5);
+  const vDown = Math.max(-s.vz, 0);
+
+  let hSb = (vDown * vDown - V_LAND * V_LAND) / (2 * aMaxNet);
+  hSb += (s.vx * s.vx) / (2 * Math.max(TMAX / s.m, 1)) * 0.22;
+  hSb += Math.min(0.40 * Math.abs(s.x) + 1.4 * Math.abs(s.vx), 180);
+  hSb = 1.06 * hSb + 12;
+  lastHsb = hSb;
+
+  if (apMem.burn && h > 55 && vDown < 8) apMem.burn = false;
+  if (h <= hSb && h < 1200) apMem.burn = true;
+  const inBurn = !!apMem.burn;
+
+  let thLim;
+  if (h < 40) thLim = (5 + 10 * h / 40) * Math.PI / 180;
+  else if (h < 180) thLim = 16 * Math.PI / 180;
+  else thLim = 20 * Math.PI / 180;
+
+  let kx = 0.0022, kv = 0.022;
+  if (Math.abs(s.x) < 18 && Math.abs(s.vx) < 4) { kx = 0.0012; kv = 0.016; }
+  let thetaCmd = clamp(-kv * s.vx - kx * s.x, -thLim, thLim);
+  if (h < 14) thetaCmd *= h / 14;
+
+  const fuel = s.m - M_DRY;
+  let u = 0;
+  let phase = "coast";
+
+  if (inBurn && fuel > 15) {
+    if (h > 30) {
+      const aNet = (s.vz * s.vz - V_LAND * V_LAND) / (2 * h);
+      u = clamp((aNet + G) * s.m / (TMAX * Math.max(Math.cos(s.theta), 0.42)), 0, 1);
+      if (vDown > 25 && h > 40) u = Math.max(u, 0.92);
+      if (vDown < 10 && h > 50) { u = 0; apMem.burn = false; }
+    } else {
+      let vzCmd = -Math.min(1.15 + 0.12 * h, 7);
+      if (h < 7) vzCmd = -1.05;
+      let aNet = 3.5 * (vzCmd - s.vz);
+      if (s.vz > 0.4) aNet = -2;
+      u = clamp((aNet + G) * s.m / (TMAX * Math.max(Math.cos(s.theta), 0.5)), 0, 1);
+    }
+    phase = u > 0.04 ? "burn" : "coast";
+  } else {
+    const xMiss = Math.abs(s.x + s.vx * 8);
+    if (fuel > 3300 && h > hSb + 320 && h < 2200 && (xMiss > 400 || Math.abs(s.vx) > 36)) {
+      u = 0.50;
+      phase = "approach";
+    }
+  }
+
+  const err = thetaCmd - s.theta;
+  const wn = 3.6, zeta = 1.12;
+  const alphaDes = wn * wn * err - 2 * zeta * wn * s.omega;
+  const T_est = Math.max(u * TMAX, 1);
+  const hc = hCom(s.m);
+  let delta = 0;
+  if (u >= 0.06) delta = clamp(alphaDes * inertia(s.m) / (hc * T_est), -DELTA_MAX, DELTA_MAX);
+  const fin = clamp(3.2 * err - 1.7 * s.omega, -1, 1);
+
+  if (fuel <= 8) { u = 0; delta = 0; }
+  lastPhase = phase;
+  return { u, delta, fin, phase, hSb, thetaCmd };
+}
+
+function manualControls(dt) {
+  const up = keys.KeyW || keys.ArrowUp;
+  const dn = keys.KeyS || keys.ArrowDown;
+  const lf = keys.KeyA || keys.ArrowLeft;
+  const rt = keys.KeyD || keys.ArrowRight;
+  if (up || dn || lf || rt) {
+    if (apOn) {
+      apOn = false;
+      syncApButton();
+    }
+  }
+  if (apOn) return;
+  if (up) manThrottle = clamp(manThrottle + 0.9 * dt, 0, 1);
+  if (dn) manThrottle = clamp(manThrottle - 0.9 * dt, 0, 1);
+  if (lf) manDelta = clamp(manDelta - 0.8 * dt, -DELTA_MAX, DELTA_MAX);
+  else if (rt) manDelta = clamp(manDelta + 0.8 * dt, -DELTA_MAX, DELTA_MAX);
+  else manDelta *= Math.pow(0.08, dt); // recenter gimbal
+  uCmd = manThrottle;
+  deltaCmd = manDelta;
+  // Hold attitude loosely with fins so a coasting manual flight
+  // doesn't tumble from a leftover omega.
+  finCmd = clamp(-2.2 * s.theta - 1.4 * s.omega, -1, 1);
+}
+
+/* @anchor fn-evaluateContact */
+function evaluateContact() {
+  const tilt = Math.abs(s.theta);
+  const sink = Math.abs(s.vz);
+  const lat = Math.abs(s.vx);
+  const miss = Math.abs(s.x);
+  const spin = Math.abs(s.omega);
+  if (sink > 4.0) return { ok: false, why: "HIGH SINK RATE" };
+  if (tilt > 9 * Math.PI / 180) return { ok: false, why: "TIP-OVER" };
+  if (miss > PAD_R) return { ok: false, why: "OFF PAD" };
+  if (lat > 3.0) return { ok: false, why: "LATERAL VELOCITY" };
+  if (spin > 40 * Math.PI / 180) return { ok: false, why: "TIP-OVER" };
+  return { ok: true, why: "GEAR DOWN  ·  VEHICLE STABLE" };
+}
+
+function finish(ok, why) {
+  done = true;
+  outcome = ok ? "ok" : "bad";
+  outcomeWhy = why;
+  uCmd = 0; deltaCmd = 0;
+  const ban = document.getElementById("banner");
+  ban.className = "banner show " + (ok ? "ok" : "bad");
+  document.getElementById("bannerBig").textContent =
+    ok ? "LZ-1  ·  LANDING CONFIRMED" : "RUD  ·  VEHICLE LOST";
+  document.getElementById("bannerWhy").textContent = why;
+  if (!ok) explode();
+  else dustBurst(1.2);
+}
+
+/* @anchor fn-tick */
+function tick(dt) {
+  if (done) {
+    // Settle on the pad, or keep tumbling after a RUD.
+    if (outcome === "ok") {
+      const hc = hCom(s.m);
+      s.z = hc * Math.cos(s.theta) + LEG;
+      s.vz = 0;
+      s.vx *= 0.9;
+      s.omega *= 0.85;
+      s.theta *= 0.9;
+    } else {
+      stepPhysics(dt);
+      if (s.z < hCom(s.m) * 0.2) s.z = hCom(s.m) * 0.2;
+    }
+    return;
+  }
+
+  if (apOn) {
+    const g = guidance();
+    uCmd = g.u;
+    deltaCmd = g.delta;
+    finCmd = g.fin;
+    manThrottle = uCmd;
+    manDelta = deltaCmd;
+  }
+  manualControls(dt);
+  stepPhysics(dt);
+
+  const h = feetZ(s);
+  const wantLegs = h < 450 || lastPhase === "burn" || s.z < 500;
+  legsDeploy = clamp(legsDeploy + (wantLegs ? 1.6 : -0.8) * dt, 0, 1);
+
+  if (h <= 0) {
+    const frac = 0; // already at or past contact this substep
+    s.z -= h; // snap gear to deck
+    const ev = evaluateContact();
+    finish(ev.ok, ev.why);
+    return;
+  }
+  if (Math.abs(s.theta) > 80 * Math.PI / 180) {
+    finish(false, "TUMBLE");
+    return;
+  }
+  if (s.z < -10) {
+    finish(false, "GROUND IMPACT");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Particles
+// ---------------------------------------------------------------------------
+function emitPlume(n) {
+  const hc = hCom(s.m);
+  const ang = s.theta + deltaCmd;
+  const ex = s.x - hc * Math.sin(s.theta);
+  const ez = s.z - hc * Math.cos(s.theta);
+  const ux = Math.sin(ang), uz = Math.cos(ang);
+  for (let i = 0; i < n; i++) {
+    const spd = 40 + uCmd * 90 + Math.random() * 40;
+    const j = (Math.random() - 0.5) * 0.25;
+    particles.push({
+      x: ex + (Math.random() - 0.5) * 1.2,
+      z: ez + (Math.random() - 0.5) * 0.6,
+      vx: s.vx - ux * spd + (Math.random() - 0.5) * 18,
+      vz: s.vz - uz * spd + (Math.random() - 0.5) * 12,
+      life: 0.18 + Math.random() * 0.28,
+      age: 0,
+      r: 0.6 + Math.random() * 1.4 * uCmd,
+      kind: "plume"
+    });
+  }
+}
+function dustBurst(scale) {
+  for (let i = 0; i < 28 * scale; i++) {
+    const a = rand(-Math.PI, 0);
+    const spd = rand(8, 40) * scale;
+    particles.push({
+      x: s.x + rand(-6, 6), z: 0.4,
+      vx: Math.cos(a) * spd, vz: Math.sin(a) * spd * 0.35 + rand(2, 12),
+      life: rand(0.6, 1.6), age: 0, r: rand(0.8, 2.4), kind: "dust"
+    });
+  }
+}
+function explode() {
+  for (let i = 0; i < 90; i++) {
+    const a = rand(0, Math.PI * 2);
+    const spd = rand(10, 70);
+    particles.push({
+      x: s.x, z: s.z,
+      vx: Math.cos(a) * spd, vz: Math.sin(a) * spd,
+      life: rand(0.4, 1.4), age: 0, r: rand(0.8, 3.2), kind: "fire"
+    });
+  }
+}
+function stepParticles(dt) {
+  if (uCmd > 0.05 && !done) emitPlume(Math.ceil(uCmd * 7));
+  const h = feetZ(s);
+  if (!done && uCmd > 0.2 && h < 50) {
+    if (Math.random() < uCmd * 0.4) dustBurst(0.15 * uCmd * (1 - h / 50));
+  }
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.age += dt;
+    p.x += p.vx * dt;
+    p.z += p.vz * dt;
+    if (p.kind !== "plume") p.vz -= 18 * dt;
+    if (p.z < 0) { p.z = 0; p.vz *= -0.2; p.vx *= 0.7; }
+    if (p.age > p.life) particles.splice(i, 1);
+  }
+  if (particles.length > 420) particles.splice(0, particles.length - 420);
+}
+
+// ---------------------------------------------------------------------------
+// Camera + render
+// ---------------------------------------------------------------------------
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = Math.floor(W * dpr);
+  canvas.height = Math.floor(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener("resize", resize);
+
+function wx(x) { return W * 0.5 + (x - cam.x) / cam.mpp + shake * (Math.random() - 0.5); }
+function wy(z) { return H * 0.5 - (z - cam.z) / cam.mpp + shake * (Math.random() - 0.5); }
+function m2p(m) { return m / cam.mpp; }
+
+function updateCamera(dt) {
+  const h = Math.max(feetZ(s), 1);
+  const span = clamp(Math.max(120, h * 1.25 + Math.abs(s.x) * 0.55 + 80), 90, 3600);
+  const mppT = span / H;
+  cam.mpp = lerp(cam.mpp, mppT, 1 - Math.pow(0.04, dt));
+  const tx = s.x * 0.62;
+  let tz = s.z * 0.48;
+  // Keep the pad in frame once we are in the landing burn.
+  const viewH = H * cam.mpp;
+  if (s.z < viewH * 0.85) tz = Math.max(viewH * 0.36, s.z * 0.42);
+  cam.x = lerp(cam.x, tx, 1 - Math.pow(0.08, dt));
+  cam.z = lerp(cam.z, tz, 1 - Math.pow(0.08, dt));
+  shake = lerp(shake, uCmd * 2.2, 0.25);
+}
+
+function drawSky() {
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#02040a");
+  g.addColorStop(0.55, "#0a1020");
+  g.addColorStop(0.78, "#1a1733");
+  g.addColorStop(0.90, "#3a2040");
+  g.addColorStop(1, "#c45a28");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  const t = tSim;
+  for (const st of stars) {
+    const tw = 0.55 + 0.45 * Math.sin(t * st.tw + st.ph);
+    ctx.fillStyle = `rgba(230,236,255,${st.a * tw})`;
+    ctx.beginPath();
+    ctx.arc(st.x * W, st.y * H, st.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Horizon glow
+  const hy = wy(0);
+  const hg = ctx.createRadialGradient(W * 0.5, hy, 20, W * 0.5, hy, W * 0.7);
+  hg.addColorStop(0, "rgba(255,140,60,0.22)");
+  hg.addColorStop(0.45, "rgba(80,40,90,0.10)");
+  hg.addColorStop(1, "transparent");
+  ctx.fillStyle = hg;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawGround() {
+  const y0 = wy(0);
+  // Terrain fill
+  const gg = ctx.createLinearGradient(0, y0, 0, H);
+  gg.addColorStop(0, "#1a1c22");
+  gg.addColorStop(0.35, "#12141a");
+  gg.addColorStop(1, "#07080c");
+  ctx.fillStyle = gg;
+  ctx.fillRect(0, y0, W, H - y0 + 4);
+
+  // Distant dune / scrub silhouettes (parallax-ish, just darker ground)
+  ctx.fillStyle = "#15171d";
+  ctx.beginPath();
+  ctx.moveTo(wx(-5000), y0 + 2);
+  for (let x = -5000; x <= 5000; x += 60) {
+    const zHill = 10 + 14 * Math.sin(x * 0.0035) + 6 * Math.sin(x * 0.011 + 1.2);
+    ctx.lineTo(wx(x), y0 - m2p(zHill));
+  }
+  ctx.lineTo(wx(5000), y0 + 2);
+  ctx.closePath();
+  ctx.fill();
+
+
+  // Range ticks
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, y0 - 2, W, H);
+  ctx.clip();
+  for (let x = -2000; x <= 2000; x += 100) {
+    const px = wx(x);
+    if (px < -20 || px > W + 20) continue;
+    ctx.strokeStyle = x === 0 ? "rgba(245,197,24,0.18)" : "rgba(255,255,255,0.05)";
+    ctx.beginPath();
+    ctx.moveTo(px, y0);
+    ctx.lineTo(px, H);
+    ctx.stroke();
+    if (x % 200 === 0 && x !== 0) {
+      ctx.fillStyle = "rgba(139,147,167,0.45)";
+      ctx.font = "10px Consolas, monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(x + " m", px, y0 + 14);
+    }
+  }
+  ctx.restore();
+
+  drawPad();
+}
+
+function drawPad() {
+  const y0 = wy(0);
+  const r = m2p(PAD_R + 8);
+  const cx = wx(0);
+  // Apron
+  ctx.fillStyle = "#2c3038";
+  ctx.beginPath();
+  ctx.ellipse(cx, y0, m2p(38), m2p(7), 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#3a3e48";
+  ctx.beginPath();
+  ctx.ellipse(cx, y0, m2p(28), m2p(5.2), 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Yellow X
+  ctx.save();
+  ctx.translate(cx, y0 - 1);
+  ctx.strokeStyle = "#f5c518";
+  ctx.lineWidth = Math.max(2, m2p(1.1));
+  ctx.lineCap = "butt";
+  const a = m2p(11);
+  ctx.beginPath(); ctx.moveTo(-a, -a * 0.22); ctx.lineTo(a, a * 0.22); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(a, -a * 0.22); ctx.lineTo(-a, a * 0.22); ctx.stroke();
+  ctx.restore();
+
+  // Chevrons + lights
+  ctx.fillStyle = "#f5c518";
+  ctx.font = `${Math.max(9, m2p(2.2))}px Segoe UI, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.fillText("LZ-1", cx, y0 + m2p(11));
+
+  for (let i = -3; i <= 3; i++) {
+    if (i === 0) continue;
+    const px = wx(i * 10);
+    ctx.fillStyle = (Math.floor(tSim * 2) + i) % 2 ? "#ffe08a" : "#7a5a10";
+    ctx.beginPath();
+    ctx.arc(px, y0 - 2, Math.max(1.4, m2p(0.45)), 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Tiny bunker / windsock
+  const bx = wx(48);
+  ctx.fillStyle = "#252830";
+  ctx.fillRect(bx, y0 - m2p(6), m2p(8), m2p(6));
+  ctx.fillStyle = "#f5c518";
+  ctx.fillRect(bx + m2p(1), y0 - m2p(5.2), m2p(2.2), m2p(1.1));
+}
+
+function drawTrail() {
+  if (trail.length < 2) return;
+  ctx.beginPath();
+  ctx.strokeStyle = "rgba(122,248,255,0.28)";
+  ctx.lineWidth = 1.2;
+  ctx.moveTo(wx(trail[0].x), wy(trail[0].z));
+  for (let i = 1; i < trail.length; i++) {
+    ctx.lineTo(wx(trail[i].x), wy(trail[i].z));
+  }
+  ctx.stroke();
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    const k = 1 - p.age / p.life;
+    const px = wx(p.x), pz = wy(p.z);
+    const r = Math.max(0.6, m2p(p.r) * (p.kind === "plume" ? 1.2 : 1));
+    if (p.kind === "plume") {
+      ctx.fillStyle = `rgba(255, ${180 + 50 * k | 0}, ${80 + 40 * k | 0}, ${0.18 + 0.45 * k})`;
+    } else if (p.kind === "fire") {
+      ctx.fillStyle = `rgba(255, ${90 + 80 * k | 0}, 40, ${0.7 * k})`;
+    } else {
+      ctx.fillStyle = `rgba(180, 170, 150, ${0.35 * k})`;
+    }
+    ctx.beginPath();
+    ctx.arc(px, pz, r * (0.6 + 0.8 * k), 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawPlume() {
+  if (uCmd < 0.04 || (done && outcome === "ok")) return;
+  const hc = hCom(s.m);
+  const ex = s.x - hc * Math.sin(s.theta);
+  const ez = s.z - hc * Math.cos(s.theta);
+  const ang = s.theta + deltaCmd;
+  const px = wx(ex), py = wy(ez);
+  ctx.save();
+  ctx.translate(px, py);
+  // Screen: +theta rotates clockwise from up. Engine plume goes opposite nose.
+  ctx.rotate(ang);
+  const len = m2p(8 + 22 * uCmd);
+  const wid = m2p(0.9 + 1.8 * uCmd);
+  const grd = ctx.createLinearGradient(0, 0, 0, len);
+  grd.addColorStop(0, "rgba(255,255,255,0.95)");
+  grd.addColorStop(0.18, "rgba(180,230,255,0.75)");
+  grd.addColorStop(0.4, "rgba(255,200,80,0.55)");
+  grd.addColorStop(0.75, "rgba(255,90,30,0.22)");
+  grd.addColorStop(1, "rgba(255,40,0,0)");
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.moveTo(-wid * 0.55, 0);
+  ctx.quadraticCurveTo(-wid * 1.6, len * 0.45, 0, len);
+  ctx.quadraticCurveTo(wid * 1.6, len * 0.45, wid * 0.55, 0);
+  ctx.closePath();
+  ctx.fill();
+  // Shock diamonds
+  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  for (let i = 1; i <= 3; i++) {
+    const d = len * (0.16 * i);
+    ctx.beginPath();
+    ctx.ellipse(0, d, wid * 0.22, wid * 0.12, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawRocket() {
+  const hc = hCom(s.m);
+  const px = wx(s.x), py = wy(s.z);
+  const S = 1 / cam.mpp; // px per meter
+
+  ctx.save();
+  ctx.translate(px, py);
+  ctx.rotate(s.theta);
+  // Local: x right, y down toward engine. COM at origin.
+  // Engine at y = +hc, nose at y = -(L - hc)
+
+  const R = (D_BODY / 2) * S;
+  const yEng = hc * S;
+  const yNose = -(L - hc) * S;
+  const yInter = yNose + 2.6 * S;
+  const yOct = yEng - 3.2 * S;
+
+  // Landing legs (2 visible)
+  const deploy = legsDeploy;
+  const legLen = 9.5 * S;
+  const hang = lerp(8 * Math.PI / 180, 48 * Math.PI / 180, deploy);
+  for (const side of [-1, 1]) {
+    ctx.save();
+    ctx.translate(side * R * 0.9, yEng - 1.2 * S);
+    ctx.rotate(side * hang);
+    ctx.strokeStyle = "#d8dbe2";
+    ctx.lineWidth = Math.max(1.4, 0.28 * S);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, legLen);
+    ctx.stroke();
+    // foot
+    ctx.fillStyle = "#1a1c20";
+    ctx.fillRect(-0.7 * S, legLen - 0.15 * S, 1.4 * S, 0.45 * S);
+    // strut
+    ctx.strokeStyle = "rgba(180,185,195,0.7)";
+    ctx.lineWidth = Math.max(1, 0.16 * S);
+    ctx.beginPath();
+    ctx.moveTo(0, legLen * 0.45);
+    ctx.lineTo(-side * 1.6 * S, -1.8 * S);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Engine bell
+  ctx.fillStyle = "#b87333";
+  ctx.beginPath();
+  ctx.moveTo(-R * 0.42, yEng - 0.2 * S);
+  ctx.lineTo(-R * 0.72, yEng + 2.1 * S);
+  ctx.lineTo(R * 0.72, yEng + 2.1 * S);
+  ctx.lineTo(R * 0.42, yEng - 0.2 * S);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#3a2212";
+  ctx.beginPath();
+  ctx.ellipse(0, yEng + 2.1 * S, R * 0.72, 0.28 * S, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Octaweb / aft skirt
+  ctx.fillStyle = "#141518";
+  ctx.fillRect(-R, yOct, R * 2, yEng - yOct);
+
+  // White barrel
+  const bodyGrad = ctx.createLinearGradient(-R, 0, R, 0);
+  bodyGrad.addColorStop(0, "#9aa0aa");
+  bodyGrad.addColorStop(0.35, "#f2f3f6");
+  bodyGrad.addColorStop(0.7, "#d8dbe2");
+  bodyGrad.addColorStop(1, "#7c818c");
+  ctx.fillStyle = bodyGrad;
+  ctx.fillRect(-R, yInter, R * 2, yOct - yInter);
+
+  // Panel lines
+  ctx.strokeStyle = "rgba(20,24,32,0.18)";
+  ctx.lineWidth = 1;
+  for (let i = 1; i < 6; i++) {
+    const y = yInter + (yOct - yInter) * (i / 6);
+    ctx.beginPath(); ctx.moveTo(-R, y); ctx.lineTo(R, y); ctx.stroke();
+  }
+  ctx.beginPath(); ctx.moveTo(0, yInter); ctx.lineTo(0, yOct); ctx.stroke();
+
+  // Raceway
+  ctx.fillStyle = "#2a2d34";
+  ctx.fillRect(R * 0.55, yInter + 1 * S, R * 0.22, yOct - yInter - 1.2 * S);
+
+  // Flag
+  ctx.fillStyle = "#1d3a7a";
+  ctx.fillRect(-R * 0.55, yInter + 4 * S, 0.9 * S, 0.55 * S);
+  ctx.fillStyle = "#b22222";
+  ctx.fillRect(-R * 0.55, yInter + 4 * S, 0.9 * S, 0.18 * S);
+
+  // Interstage (black)
+  ctx.fillStyle = "#0e0f12";
+  ctx.fillRect(-R * 1.02, yNose, R * 2.04, yInter - yNose);
+  // Cap
+  ctx.beginPath();
+  ctx.moveTo(-R * 1.02, yNose);
+  ctx.lineTo(0, yNose - 0.8 * S);
+  ctx.lineTo(R * 1.02, yNose);
+  ctx.closePath();
+  ctx.fill();
+
+  // Grid fins (2 visible, near top)
+  const finY = yNose + 3.4 * S;
+  const finOut = lerp(0.15, 1, 0.85 + 0.15 * Math.abs(finCmd));
+  for (const side of [-1, 1]) {
+    ctx.save();
+    ctx.translate(side * R, finY);
+    ctx.rotate(side * (0.08 * finCmd));
+    ctx.fillStyle = "#3c414c";
+    ctx.strokeStyle = "#8b909a";
+    ctx.lineWidth = 1;
+    const fw = 1.7 * S * finOut, fh = 1.5 * S;
+    ctx.beginPath();
+    ctx.rect(side < 0 ? -fw : 0, -fh * 0.5, fw, fh);
+    ctx.fill(); ctx.stroke();
+    // grid
+    ctx.strokeStyle = "rgba(200,205,215,0.35)";
+    for (let g = 1; g < 3; g++) {
+      const x0 = side < 0 ? -fw : 0;
+      ctx.beginPath();
+      ctx.moveTo(x0 + fw * g / 3, -fh * 0.5);
+      ctx.lineTo(x0 + fw * g / 3, fh * 0.5);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Body outline
+  ctx.strokeStyle = "rgba(0,0,0,0.35)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(-R, yInter, R * 2, yOct - yInter);
+
+  ctx.restore();
+}
+
+function drawGimbalCue() {
+  if (uCmd < 0.05) return;
+  const hc = hCom(s.m);
+  const ex = s.x - hc * Math.sin(s.theta);
+  const ez = s.z - hc * Math.cos(s.theta);
+  const ang = s.theta + deltaCmd;
+  ctx.strokeStyle = "rgba(122,248,255,0.25)";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(wx(ex), wy(ez));
+  ctx.lineTo(wx(ex + Math.sin(ang) * 18), wy(ez + Math.cos(ang) * 18));
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawShadow() {
+  const h = feetZ(s);
+  if (h > 160 || h < -2) return;
+  const y0 = wy(0);
+  const alpha = 0.32 * (1 - clamp(h / 160, 0, 1));
+  ctx.fillStyle = `rgba(0,0,0,${alpha})`;
+  ctx.beginPath();
+  ctx.ellipse(wx(s.x), y0 - 1, m2p(5 + h * 0.03), m2p(1.5 + h * 0.008), 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function render() {
+  drawSky();
+  drawGround();
+  drawTrail();
+  drawShadow();
+  drawParticles();
+  drawPlume();
+  drawRocket();
+  if (apOn) drawGimbalCue();
+}
+
+function fmt(n, d) {
+  const v = Number(n);
+  if (!isFinite(v)) return "—";
+  return v.toFixed(d);
+}
+function setVal(id, text, cls) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = "v" + (cls ? " " + cls : "");
+}
+function hud() {
+  const h = feetZ(s);
+  const fuel = Math.max(s.m - M_DRY, 0);
+  const tw = (uCmd * TMAX) / (s.m * G);
+  const tilt = deg(s.theta);
+  const vzHot = s.vz < -6 || s.vz > 2;
+  const thHot = Math.abs(tilt) > 8;
+  const fuelHot = fuel < 600;
+
+  setVal("hAlt", fmt(Math.max(h, 0), 1) + " m", h < 40 ? "amber" : "");
+  setVal("hVz",  fmt(s.vz, 2) + " m/s", vzHot ? "warn" : (s.vz > -2.5 && h < 80 ? "ok" : ""));
+  setVal("hVx",  fmt(s.vx, 2) + " m/s", Math.abs(s.vx) > 8 ? "warn" : "");
+  setVal("hX",   fmt(s.x, 1) + " m", Math.abs(s.x) > PAD_R ? "warn" : (Math.abs(s.x) < 8 ? "ok" : ""));
+  setVal("hTh",  fmt(tilt, 1) + "°", thHot ? "warn" : "");
+  setVal("hGi",  fmt(deg(deltaCmd), 1) + "°");
+  setVal("hU",   (uCmd * 100).toFixed(0) + " %", uCmd > 0.85 ? "amber" : "");
+  setVal("hFuel", (fuel / 1000).toFixed(2) + " t", fuelHot ? "warn" : "");
+  document.getElementById("fuelBar").style.width = (100 * fuel / M_FUEL0) + "%";
+
+  const mm = Math.floor(tSim / 60);
+  const ss = tSim - mm * 60;
+  setVal("hT", String(mm).padStart(2, "0") + ":" + ss.toFixed(1).padStart(4, "0"));
+  setVal("hM", (s.m / 1000).toFixed(1) + " t");
+  setVal("hTW", fmt(tw, 2));
+  setVal("hOm", fmt(deg(s.omega), 1) + " °/s");
+  setVal("hSb", fmt(lastHsb, 0) + " m");
+
+  const phaseEl = document.getElementById("phase");
+  const names = { coast: "coasting", burn: "landing burn", approach: "approach burn" };
+  phaseEl.textContent = done
+    ? (outcome === "ok" ? "landed" : "loss of vehicle")
+    : (names[lastPhase] || lastPhase);
+  document.getElementById("apLabel").textContent = apOn ? "autopilot armed" : "manual — stick active";
+}
+
+function syncModeButtons() {
+  for (const [id, m] of [["btnPerfect","perfect"],["btnNormal","normal"],["btnHard","hard"]]) {
+    document.getElementById(id).classList.toggle("on", mode === m);
+  }
+}
+function syncApButton() {
+  document.getElementById("btnAp").classList.toggle("on", apOn);
+}
+
+// ---------------------------------------------------------------------------
+// Loop + input
+// ---------------------------------------------------------------------------
+let acc = 0;
+let lastTs = 0;
+let trailAcc = 0;
+
+/* @anchor fn-frame */
+function frame(ts) {
+  if (!lastTs) lastTs = ts;
+  let dt = (ts - lastTs) / 1000;
+  lastTs = ts;
+  if (dt > 0.05) dt = 0.05;
+
+  if (!paused) {
+    acc += dt;
+    const maxSub = 24;
+    let n = 0;
+    while (acc >= DT && n < maxSub) {
+      tick(DT);
+      acc -= DT;
+      n++;
+      tSim += DT;
+    }
+    if (n === maxSub) acc = 0;
+    stepParticles(dt);
+    updateCamera(dt);
+    trailAcc += dt;
+    if (trailAcc > 0.05 && !done) {
+      trailAcc = 0;
+      trail.push({ x: s.x, z: s.z });
+      if (trail.length > 240) trail.shift();
+    }
+  }
+  render();
+  hud();
+  requestAnimationFrame(frame);
+}
+
+window.addEventListener("keydown", (e) => {
+  keys[e.code] = true;
+  if (e.code === "Space") {
+    e.preventDefault();
+    if (!done) { apOn = !apOn; syncApButton(); }
+  } else if (e.code === "KeyR") {
+    spawnIC(mode);
+  } else if (e.code === "KeyP") {
+    paused = !paused;
+    document.getElementById("btnPause").textContent = paused ? "Resume" : "Pause";
+  }
+});
+window.addEventListener("keyup", (e) => { keys[e.code] = false; });
+
+document.getElementById("btnReset").onclick = () => spawnIC(mode);
+document.getElementById("btnPause").onclick = () => {
+  paused = !paused;
+  document.getElementById("btnPause").textContent = paused ? "Resume" : "Pause";
+};
+document.getElementById("btnAp").onclick = () => { apOn = !apOn; syncApButton(); };
+document.getElementById("btnPerfect").onclick = () => spawnIC("perfect");
+document.getElementById("btnNormal").onclick = () => spawnIC("normal");
+document.getElementById("btnHard").onclick = () => spawnIC("hard");
+
+resetStars();
+resize();
+spawnIC("normal");
+requestAnimationFrame(frame);
+})();
+</script>
+
+<!-- Annotated-edition source anchors (copy only; original rocket-landing is untouched) -->
+<span id="fn-constants"></span>
+<span id="fn-hCom"></span>
+<span id="fn-inertia"></span>
+<span id="fn-rho"></span>
+<span id="fn-feetZ"></span>
+<span id="fn-state"></span>
+<span id="fn-spawnIC"></span>
+<span id="fn-stepPhysics"></span>
+<span id="fn-guidance"></span>
+<span id="fn-evaluateContact"></span>
+<span id="fn-tick"></span>
+<span id="fn-frame"></span>
+<div id="ann-peek" class="ann-peek" hidden>
+  <div class="ann-peek-card">
+    <header>
+      <div>
+        <div class="ann-peek-kicker">sim source</div>
+        <h2 id="ann-peek-title">function</h2>
+      </div>
+      <button type="button" id="ann-peek-x" aria-label="Close">×</button>
+    </header>
+    <pre id="ann-peek-code"></pre>
+    <p class="ann-peek-note">This overlay is only on the annotated copy of the sim. Close it to keep flying.</p>
+  </div>
+</div>
+<style>
+.ann-peek[hidden] { display: none !important; }
+.ann-peek {
+  position: fixed; inset: 0; z-index: 40;
+  background: rgba(4,6,10,0.62);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.ann-peek-card {
+  width: min(720px, 100%);
+  max-height: 86vh;
+  overflow: auto;
+  background: #0b0f16;
+  border: 1px solid rgba(122,248,255,0.28);
+  color: #e8edf7;
+  padding: 16px 18px 14px;
+  font-family: "SF Mono", Consolas, monospace;
+}
+.ann-peek-card header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.ann-peek-kicker { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: #f5c518; }
+.ann-peek-card h2 { font-size: 16px; font-weight: 600; margin: 4px 0 10px; color: #7af8ff; }
+.ann-peek-card pre {
+  white-space: pre-wrap;
+  font-size: 12px; line-height: 1.45;
+  color: #d5dbe8;
+  margin: 0 0 10px;
+}
+.ann-peek-note { font-size: 11px; color: #8b93a7; }
+#ann-peek-x {
+  background: transparent; border: 1px solid rgba(122,248,255,0.22);
+  color: #7af8ff; width: 32px; height: 32px; font-size: 20px; cursor: pointer;
+}
+</style>
+<script>
+(function () {
+  const peek = document.getElementById("ann-peek");
+  const title = document.getElementById("ann-peek-title");
+  const pre = document.getElementById("ann-peek-code");
+  const close = () => { peek.hidden = true; };
+  document.getElementById("ann-peek-x").onclick = close;
+  peek.addEventListener("click", (e) => { if (e.target === peek) close(); });
+  window.addEventListener("keydown", (e) => { if (e.key === "Escape" && !peek.hidden) close(); });
+
+  function extractAnchor(src, id) {
+    const tag = "/* @anchor " + id + " */";
+    const i = src.indexOf(tag);
+    if (i < 0) return null;
+    let start = i + tag.length;
+    while (src[start] === "\n") start++;
+    const next = src.indexOf("/* @anchor ", start);
+    let end = next < 0 ? src.length : next;
+    // stop at a following major banner if no next anchor
+    const cut = src.indexOf("\n// ---------------------------------------------------------------------------\n", start + 40);
+    if (next < 0 && cut > start) end = cut;
+    return src.slice(start, end).replace(/\s+$/, "");
+  }
+
+  function openFromHash() {
+    const h = (location.hash || "").replace(/^#/, "");
+    if (!h.startsWith("fn-")) return;
+    const script = document.getElementById("sim-src");
+    if (!script) return;
+    const body = extractAnchor(script.textContent, h);
+    title.textContent = h.replace(/^fn-/, "");
+    pre.textContent = body || ("Could not find " + h + " in this copy.");
+    peek.hidden = false;
+  }
+  window.addEventListener("hashchange", openFromHash);
+  openFromHash();
+})();
+</script>
+
+</body>
+</html>

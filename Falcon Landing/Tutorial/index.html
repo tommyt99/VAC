@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Landing a Falcon 9 First Stage</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />
+</head>
+<body>
+<div class="wrap">
+<nav class="toc" aria-label="Sections">
+<div class="brand">Technical note</div>
+<h1>Falcon 9 first-stage landing</h1>
+<ol>
+<li><a href="#why">1. Why this is hard</a></li>
+<li><a href="#timeline">2. Mission timeline</a></li>
+<li><a href="#pendulum">3. Inverted pendulum</a></li>
+<li><a href="#suicide">4. Vertical channel</a></li>
+<li><a href="#gnc">5. GNC</a></li>
+<li><a href="#aero">6. Aero and grid fins</a></li>
+<li><a href="#prop">7. Propulsion constraints</a></li>
+<li><a href="#structures">8. Structures</a></li>
+<li><a href="#fuel">9. Fuel and margins</a></li>
+<li><a href="#sim">10. The 2D sim</a></li>
+<li><a href="#sources">Sources</a></li>
+</ol>
+<p class="src">Written for Tommy Tran. Numbers tagged official vs unofficial. No invented papers.</p>
+</nav>
+<main>
+<header class="hero">
+<div class="kicker">Science / math / engineering</div>
+<h1>Landing a Falcon 9 first stage</h1>
+<p class="dek">A technical tutorial for a structural engineer who is also building a 2D inverted-pendulum landing simulator. The real vehicle, then the plant you should code.</p>
+<div class="meta">August 2026 · public sources only · companion to TUTORIAL.md</div>
+</header>
+<p class="lead">Tommy — this is written for you. You already think in free-body diagrams, second-order dynamics, and “what does this load path actually do.” The Falcon 9 first-stage landing is the same kind of problem, just with a throttle you cannot turn off, a vehicle that is aerodynamically a falling chimney, and a commit altitude measured in seconds. The 2D sim you are building is not a toy version of the wrong problem. It is the right problem with most of the clothing stripped off.</p>
+<p>Public numbers below are tagged. <strong>Official</strong> means SpaceX’s current Falcon User’s Guide (Rev. 8, March 2025) or the Falcon 9 vehicle page. <strong>Unofficial</strong> means widely cited compilations (Wikipedia, Spaceflight101, reconstructed timelines) or a public comment that is not in the current guide. Approximate values are labeled as such. I will not invent a paper, a quote, or a thrust number.</p>
+<h2 id="why">1. Why this is hard</h2>
+<p>An airplane landing is a controlled conversion of kinetic energy into lift, drag, and finally rolling friction. The vehicle is already the right way up. The wing still works at the flare. The pilot (or the autoland) can go around. The runway is measured in kilometers.</p>
+<p>A Falcon 9 first stage arriving at a pad or a droneship is doing something else. After main-engine cutoff it is a slender, almost-empty tube, forty-odd meters long and 3.66 m in diameter, falling engines-first toward a concrete disk or a barge deck. It has no wings. The four grid fins are control surfaces, not a lifting body. The nine Merlin engines were sized for liftoff of a 549-tonne stack, not for hovering 25-odd tonnes of dry booster. The landing burn is a late commit: light too late and you hit; light too early and the engine, which cannot throttle to weight, lofts you back into the air. There is no go-around in the aircraft sense. The “runway” is tens of meters across, and if the target is an Autonomous Spaceport Drone Ship it is also moving.</p>
+<p>Call the vehicle what it is mechanically: an inverted pendulum with the hinge at the engine gimbal and the mass above it. A broomstick on your palm is the same plant. Open-loop upright thrust does not stabilize it. You must continuously put the thrust vector under the center of mass, or the horizontal acceleration from any lean integrates twice into a miss, and then into a tip-over.</p>
+<p>Several disturbances make the plant less polite than a classroom broomstick:</p>
+<ul>
+<li><strong>Engine-out and engine-restart.</strong> The landing is not one burn. Typical recoveries restart a subset of Merlins two or three times (boostback on many profiles, entry, landing). Each restart is a TEA-TEB ignition of a gas-generator engine that has been coasting, chilling, and seeing vacuum then atmosphere. SpaceX demonstrated first-stage engine-out on <em>ascent</em> as early as CRS-1 (2012); the landing problem is the complementary one — getting an engine <em>back on</em> when you need it.</li>
+<li><strong>Wind and aero.</strong> From roughly 70 km down, the stage is a bluff body in a rapidly changing Mach field. The center of pressure is not at the center of mass. Grid fins have authority that vanishes as dynamic pressure falls in the last seconds, which is exactly when you most want to be vertical over a small target.</li>
+<li><strong>Late commit.</strong> The landing burn is on the order of tens of seconds, not minutes. Guidance is solving a two-point boundary value problem with a control that is bounded away from zero.</li>
+<li><strong>Tiny landing zone.</strong> A pad at LZ-1 / LZ-2 / LZ-4 is a painted circle. A droneship deck is a barge. Either is small compared to the position uncertainty you would tolerate if you could hover and walk it in.</li>
+</ul>
+<p>The rest of this note is how the vehicle, the burns, and the GNC turn that unstable plant into a routine recovery. As of mid-August 2026 the public tally is on the order of 600 successful Falcon first-stage landings; the engineering did not get easier, it got repeatable.</p>
+<h2 id="timeline">2. The mission timeline</h2>
+<p>What each burn is <em>buying</em> matters more than the clock. Times and altitudes below are typical Eastern-range profiles, reconstructed from public mission timelines (Spaceflight Now and similar). They vary with payload, target orbit, and whether the booster is coming home or meeting a ship. Treat the numbers as order-of-magnitude, not a flight rules card.</p>
+<div class="fig"><pre class="mermaid">
+%%{init: {'theme':'dark'}}%%
+flowchart LR
+  A[Liftoff<br/>9 Merlins] --> B[MECO<br/>~T+2.5 min]
+  B --> C[Sep + flip<br/>N2 RCS]
+  C --> D{RTLS?}
+  D -->|yes| E[Boostback<br/>3 engines]
+  D -->|ASDS often short/none| F[Coast]
+  E --> F
+  F --> G[Entry burn<br/>usually 3]
+  G --> H[Grid-fin aero<br/>hypersonic to subsonic]
+  H --> I[Landing burn<br/>3-to-1 or 1]
+  I --> J[Legs + touchdown]
+</pre><p class="cap">Figure 1. Recovery timeline. Boostback is an RTLS tax; many ASDS profiles shorten or omit it.</p></div>
+<p><strong>MECO and staging.</strong> Nine sea-level Merlins shut down. The User’s Guide lists commanded shutdown and a pneumatic stage-separation system: mechanical latches released by high-pressure helium, then pneumatic pushers (including a redundant center pusher) to enforce a positive, low-shock separation. A few seconds later the second-stage Merlin Vacuum lights. The first stage is now on its own, typically somewhere in the neighborhood of 60–80 km and a few kilometers per second downrange, well above most of the atmosphere, engines forward of the velocity vector in the wrong sense for landing.</p>
+<p><strong>Flip.</strong> Nitrogen cold-gas thrusters (the User’s Guide lists GN2 ACS for coast / recovery attitude control) pitch the stage engines-first. This is not optional cosmetics. Every subsequent burn is a braking burn; the thrust must point near the velocity vector. The flip is a rigid-body slew plus residual rates. Grid fins typically deploy around this phase so they are ready when air shows up.</p>
+<p><strong>Boostback (RTLS, and some ASDS).</strong> Three Merlins relight and burn on the order of a minute (RTLS) to cancel, then reverse, the downrange velocity so the instantaneous impact point walks back to the landing zone. That is an expensive $\Delta v$. Return-to-launch-site is chosen when the ascent has left enough propellant in the first stage — lighter payloads, lower-energy orbits. For many droneship recoveries the boostback is short (nudge the impact point onto the ship’s station, still hundreds of kilometers downrange) or omitted entirely. No boostback is a performance gift to the payload: the first stage can burn longer on ascent. The ship simply sits where the booster will fall. Bangabandhu-1 (the first Block 5, May 2018) is a documented example of an ASDS profile with an entry burn and a landing burn and no boostback.</p>
+<p><strong>Coast.</strong> Between burns the stage is in free fall with aero growing as altitude drops. RCS holds attitude. Propellant must stay settled against the tank outlets or the next ignition ingests ullage gas — a turbopump does not enjoy that. Settling can be a small acceleration from RCS or from residual thrust attitude; the public record does not give a SpaceX settling-burn spec, so I will not invent one. The physics is the same as any restartable stage.</p>
+<p><strong>Entry burn.</strong> Typically three engines, tens of seconds, starting in the rough neighborhood of 50–70 km. Two things are being bought, and they are easy to conflate.</p>
+<ol>
+<li><em>Residual velocity.</em> Without a burn the stage would enter too fast. Heating and dynamic pressure scale badly with $v^2$ and with $v^3$ for stagnation heat-transfer in the usual engineering correlations. The burn takes the stage from high hypersonic toward a speed the structure and the fins can live with.</li>
+<li><em>A plume that is also a heat shield.</em> Retropropulsion in the upper atmosphere puts a large, hot, but <em>engine-controlled</em> gas cap ahead of the octaweb. That is not a tiled TPS. It is a fluid-dynamic shield that SpaceX has used in place of adding a lot of entry mass. The public FAA environmental assessments describe the entry burn as reducing velocity and setting the descent angle; they do not publish a heat-flux budget, and neither will I.</li>
+</ol>
+<p>After cutoff the stage is a guided dart. Grid fins do the steering for the next minute or so.</p>
+<p><strong>Landing burn.</strong> One engine, or three stepping down to one. Starts at low kilometers of altitude — reconstructed profiles often show something like 1–8 km depending on RTLS vs ASDS and one- vs three-engine start; treat that as unofficial. This burn is the suicide burn / hoverslam discussed in §4. Legs deploy in the last seconds (helium-driven pneumatics; see §8). Engines cut at or within a fraction of a second of touchdown. Residual LOX is often vented on the pad or deck; RP-1 stays in the tank.</p>
+<p><strong>What each burn is buying, in one line.</strong></p>
+<table>
+<thead><tr><th>Burn</th><th>Buys</th></tr></thead><tbody>
+<tr><td>Ascent</td><td>Orbital energy for the stack</td></tr>
+<tr><td>Boostback</td><td>A landing site that is not under the ascent IIP (RTLS or a closer ASDS station)</td></tr>
+<tr><td>Entry</td><td>Peak heating and $q$ the aft bay and fins can survive</td></tr>
+<tr><td>Grid-fin glide</td><td>Crossrange / downrange steering without spending propellant</td></tr>
+<tr><td>Landing</td><td>$v \to 0$ at $z \to 0$, with the stick still upright</td></tr>
+</tbody>
+</table>
+<h2 id="pendulum">3. The inverted pendulum</h2>
+<p>This is the conceptual core, and it is what your 2D sim should get right before it gets pretty.</p>
+<h3>3.1 States and geometry</h3>
+<p>Work in a plane. Origin at the intended touchdown point, $+x$ horizontal, $+z$ up. The vehicle is a rigid body. The engine gimbal sits a distance $\ell$ <em>below</em> the center of mass, along the body axis. Let $\theta$ be the angle of the body from vertical, positive when the nose (forward end, interstage) leans toward $+x$. Let $\delta$ be the gimbal angle, positive when the thrust vector is rotated from the body axis toward $+x$. Thrust magnitude is $T$, mass $m$, centroidal inertia $I$.</p>
+<p>Seven states are enough for a planar landing trainer:</p>
+<div class="eq">
+$$
+\mathbf{s} = \bigl(x,\; z,\; v_x,\; v_z,\; \theta,\; \omega,\; m\bigr)
+$$
+</div>
+<p>Controls are $T(t)$ and $\delta(t)$, both bounded.</p>
+<div class="fig"><pre class="mermaid">
+%%{init: {'theme':'dark'}}%%
+flowchart TB
+  N["Interstage / grid fins"] --- COM((CM))
+  COM --- G["Engine gimbal"]
+  G --> Tx["Tx = T sin(theta+delta)"]
+  G --> Tz["Tz = T cos(theta+delta)"]
+  COM --> W["mg"]
+  G --> M["M = ell T sin(delta)"]
+</pre><p class="cap">Figure 2. Planar free-body. Thrust is applied at the gimbal; weight at the CM; moment is r cross T.</p></div>
+<h3>3.2 Translation and the moment $M = \mathbf{r}\times\mathbf{T}$</h3>
+<p>Thrust on the vehicle points out the nose direction when $\delta = 0$: upright, $T$ is $+z$. In components,</p>
+<div class="eq">
+$$
+\begin{aligned}
+T_x &= T\sin(\theta+\delta) \\
+T_z &= T\cos(\theta+\delta).
+\end{aligned}
+$$
+</div>
+<p>Newton, with gravity and an optional aero force $\mathbf{F}_a$:</p>
+<div class="eq">
+$$
+\begin{aligned}
+m\dot v_x &= T\sin(\theta+\delta) + F_{a,x} \\
+m\dot v_z &= T\cos(\theta+\delta) - mg + F_{a,z} \\
+\dot m &= -\frac{T}{I_{\mathrm{sp}}\,g_0}.
+\end{aligned}
+$$
+</div>
+<p>The gimbal is at $\mathbf{r}_{G/\mathrm{cm}} = \ell(-\sin\theta,\,-\cos\theta)$. The 2-D moment about the CM is $M = r_x T_z - r_z T_x$. Substituting and using an angle-subtraction identity:</p>
+<div class="eq">
+$$
+M = \ell T\sin\delta, \qquad I\dot\omega = -\ell T\sin\delta.
+$$
+</div>
+<p>(The minus sign is the geometry: a positive $\delta$ puts extra $+x$ force <em>below</em> the CM and rotates the nose back toward $-x$.) For small gimbal angles, $\sin\delta\approx\delta$,</p>
+<div class="eq">
+$$
+I\dot\omega \approx -\ell T\,\delta.
+$$
+</div>
+<p>Gimbal is not a pure attitude effector. The same $\delta$ that makes a moment also steals a slice of $T$ into the horizontal channel. That is the difference between a reaction wheel and thrust-vector control, and it is why your sim should apply $T$ at the tail, not as a couple plus a force at the CM.</p>
+<h3>3.3 Why open-loop upright thrust is unstable</h3>
+<p>Park the vehicle at hover: $T = mg$, $\theta = 0$, $\delta = 0$, $v_x = v_z = 0$. Linearize. To first order,</p>
+<div class="eq">
+$$
+\ddot x = g\,(\theta + \delta), \qquad \ddot\theta = -\frac{mg\ell}{I}\,\delta.
+$$
+</div>
+<p>Hold $\delta = 0$ and give a one-degree lean. Attitude does not grow — in vacuum there is no moment about the CM, so $\theta$ is a <em>free double integrator</em>, neutrally stable. Position is not. $\ddot x = g\theta$ integrates to</p>
+<div class="eq">
+$$
+x(t) = x_0 + v_{x0}\,t + \tfrac12 g\theta\,t^2.
+$$
+</div>
+<p>A 1° lean at $g$ is about 0.17 m/s² of horizontal acceleration. In ten seconds that is 8.5 m of position and 1.7 m/s of drift, with no moment arm to tell the attitude loop anything is wrong. You have left the pad. That is already a failed landing.</p>
+<p>The broomstick poles appear when you add the <em>task</em>: keep the engine over a point (the pad). Constrain $x - \ell\theta \approx 0$ so the gimbal stays under the CM. Then $x \approx \ell\theta$ and the $\delta = 0$ hover equations collapse to</p>
+<div class="eq">
+$$
+\ell\ddot\theta = g\theta \quad\Rightarrow\quad \ddot\theta - \frac{g}{\ell}\theta = 0.
+$$
+</div>
+<p>Poles at $\pm\sqrt{g/\ell}$. For $\ell$ of order 15–20 m (unofficial — SpaceX does not publish the landing CM; a 41 m stage with most of the remaining mass in the engine section and aft RP-1 sits lower than a full tank), the unstable time constant $1/\sqrt{g/\ell}$ is about 1.2–1.4 s. That is a broomstick. You can balance it, but not by freezing your hand.</p>
+<p>Two cousins of the same plant:</p>
+<ul>
+<li><strong>Cart-pole.</strong> The cart acceleration is your $\delta$-driven horizontal thrust. The pole angle is $\theta$. Same linearized poles, same non-minimum-phase “move the base the wrong way first” feel.</li>
+<li><strong>Missile TVC.</strong> A boost-phase ICBM or a thrust-vectoring SAM is a <em>pendulum hanging from the engine</em> if the CM is ahead of the nozzle, which it is. The sign on the $\theta$ stiffness flips relative to a landing rocket because the missile wants to fly the other direction — but the control is the same lever: $M = \mathbf{r}\times\mathbf{T}$. Falcon 9 on ascent is that missile. Falcon 9 on landing is the broomstick. One airframe, two open-loop signs.</li>
+</ul>
+<p>Your trainer should be able to reproduce the $\pm\sqrt{g/\ell}$ pair with $\delta$ frozen and a “keep the tail on $x=0$” constraint, and then watch those poles move into the left half-plane when a reasonable attitude-plus-position loop is closed on $\delta$.</p>
+<h3>3.4 Attitude command from desired acceleration</h3>
+<p>Guidance (next section) will ask for a vector acceleration $\mathbf{a}_{\mathrm{cmd}}$. The inner loop’s job is to point the rocket so that</p>
+<div class="eq">
+$$
+\frac{T}{m}\,\hat e_T - g\hat z \approx \mathbf{a}_{\mathrm{cmd}}.
+$$
+</div>
+<p>The desired thrust direction is therefore</p>
+<div class="eq">
+$$
+\hat e_T \parallel \mathbf{a}_{\mathrm{cmd}} + g\hat z,
+$$
+</div>
+<p>and $\theta_{\mathrm{cmd}} = \mathrm{atan2}(a_{x,\mathrm{cmd}},\, a_{z,\mathrm{cmd}}+g)$ in the plane (with $\delta$ taking the high-frequency residual). This is the “point the rocket so thrust minus gravity gives the needed accel” rule. It is also why a landing rocket in a cross-wind or a divert looks tilted: it is not weathercocking for style. It is aligning $T$ with $\mathbf{a}+g$.</p>
+<h2 id="suicide">4. Vertical channel / suicide burn</h2>
+<p>Ignore attitude for a page. The vertical channel is a double integrator with a bounded, strictly positive acceleration. That bound is why SpaceX does not hover the last kilometer.</p>
+<h3>4.1 T/W and the throttle floor</h3>
+<p>Official Merlin 1D sea-level thrust is 845 kN (190,000 lbf) per engine. The March 2025 User’s Guide lists sea-level throttle capability as 190,000 lbf down to 108,300 lbf — about <strong>57%</strong>. An earlier public comment from Elon Musk (2016) put the minimum near <strong>40%</strong> of one Merlin; Wikipedia and many secondary writeups still quote ~40%. I am not going to reconcile those. Use the User’s Guide as the current published band, and treat 40% as an older public ballpark. Either way the conclusion below is unchanged.</p>
+<p>First-stage empty mass is <strong>not in the User’s Guide</strong>. The commonly cited unofficial figure is about 25,600 kg. At that mass, weight is ~251 kN. Official minimum thrust on one engine is then ~482 kN, a T/W of about 1.9. Even at a 40% / ~338 kN floor, T/W is about 1.35. Residual propellant at touchdown raises the mass and lowers T/W, but flight video, post-landing vents, and the existence of a hoverslam all say the same thing: <strong>one Merlin at minimum throttle still lifts an almost-empty booster.</strong> You cannot hover. You can only pass through hover.</p>
+<p>That maneuver is a <em>hoverslam</em> (SpaceX-adjacent jargon) or <em>suicide burn</em> (the older game / Kerbal name). The engine lights at a computed altitude, stays high in the throttle box, and the trajectory is timed so that $v_z = 0$ at $z = 0$. A short “settle” at the end — a few seconds that <em>look</em> like a hover on the webcast — is not a kilometer of hovering. It is the last bit of a bang-bang profile plus whatever margin the guidance kept, and it is expensive.</p>
+<h3>4.2 Constant-thrust ignition altitude</h3>
+<p>Double integrator, downward speed $V = -v_z > 0$ at height $h$, constant thrust acceleration $a = T/m > g$, want $(z,v_z)=(0,0)$:</p>
+<div class="eq">
+$$
+0 = V^2 - 2(a-g)h \quad\Rightarrow\quad h_\star = \frac{V^2}{2(a-g)}.
+$$
+</div>
+<p>Same result from energy: the engine must remove kinetic energy $mV^2/2$ while gravity adds $mgh$ and the engine does work $Tah$ (in the constant-$m$ idealization). Mass is not constant — $\dot m = -T/(I_{\mathrm{sp}}g_0)$ — so a slightly better estimate integrates the rocket equation along the burn, but $h_\star$ is the number you should implement first. It is also the number that makes the last 30 seconds feel like a knife edge: $h_\star$ scales with $V^2$, and $V$ is still hundreds of meters per second when the fins hand the problem to the engine.</p>
+<p>If you light above $h_\star$ at fixed $a$, you zero the velocity in the air and then accelerate upward. If you light below $h_\star$, you hit. The only continuous control that would let you be sloppy is $T = mg$, which you do not have.</p>
+<h3>4.3 Dead time, rise time, and why they do not hover the last kilometer</h3>
+<p>Real ignition is not a step. Chilldown, TEA-TEB, turbopump spin-up, and thrust rise eat time. Guidance must fire <em>early</em> by that dead time, or $h_\star$ is a lie. Your sim should include at least a first-order lag or a pure delay on $T$, or you will tune a controller that dies on the real plant.</p>
+<p>Hovering the last kilometer would cost a gravity-loss $\Delta v$ of $g\cdot\Delta t$. One kilometer at a leisurely 20 m/s sink is 50 s and ~0.5 km/s of gravity loss, plus the propellant to hold $T\approx mg$ the whole way. A suicide burn at high $a$ does the same $\Delta v_{\mathrm{kinetic}} = V$ in a much shorter time, so gravity gets fewer seconds to charge rent. That is why high-throttle, short burns win, and why three-engine landing burns exist (§7): more $a$, less time, less propellant, tighter timing.</p>
+<p><strong>Hoverslam vs hover.</strong> A hover is $T=W$, $v=0$, $z=\mathrm{const}$. A hoverslam is $T>W$ almost all the way, $v=0$ only at $z=0$. Falcon 9’s landing is the second, with a brief terminal settle that is still $T/W > 1$ on a dry-ish stage and is therefore short.</p>
+<h2 id="gnc">5. Guidance, navigation, and control</h2>
+<p>These are three different jobs. Collapsing them into “the computer flies it” will make your sim harder to extend.</p>
+<div class="fig"><pre class="mermaid">
+%%{init: {'theme':'dark'}}%%
+flowchart LR
+  S[Sensors<br/>IMU GPS radar] --> N[Navigation<br/>state estimate]
+  N --> G[Guidance<br/>trajectory / a_cmd]
+  G --> C[Control<br/>TVC fins RCS]
+  C --> P[Plant<br/>rigid body + aero + thrust]
+  P --> S
+</pre><p class="cap">Figure 3. GNC loop. Navigation estimates; guidance plans; control tracks.</p></div>
+<h3>5.1 Navigation — where am I?</h3>
+<p>The User’s Guide states that Falcon avionics are a three-string, fault-tolerant set including flight computers, GPS receivers, and inertial measurement units. That is the official sensor list for the <em>launch vehicle</em>. Recovery-specific sensors are less formally published. The engineering split is still clear:</p>
+<ul>
+<li><strong>IMU (gyros + accelerometers).</strong> High-rate attitude and specific force. Integrates across the plasma blackout and the engine start transients. Drifts. You do not land a barge on IMU alone after eight minutes.</li>
+<li><strong>GPS / GNSS.</strong> Absolute position and velocity, meters-class standalone, better with differential corrections if the pad or ship is in the loop. The User’s Guide confirms GPS on the vehicle; it does not publish a landing CEP. Treat “landed on the X” as empirical, not as a spec.</li>
+<li><strong>Radar altimeter.</strong> What IMU+GPS are weak at, in the last hundred meters, is <em>height above the actual deck</em>. A droneship has heave. Geoid models do not give you that. A radar (or equivalent ranging) sensor is the obvious way to get $z$ relative to the surface you are about to hit. SpaceX has not put a radar-altimeter data sheet in the User’s Guide; many competent reconstructions assume one. Do not build your mental model as if GPS altitude were good to 10 cm over a moving deck.</li>
+</ul>
+<p>Navigation is an estimator. In a 2D sim, a Kalman filter on $(x,z,v_x,v_z,\theta,\omega)$ with noisy IMU and occasional GPS / altimeter updates is the honest upgrade from “omniscient state.”</p>
+<h3>5.2 Guidance — where should I go?</h3>
+<p>Guidance generates a trajectory, or at least a commanded acceleration, that takes the current state to $(x,z,v_x,v_z) = (0,0,0,0)$ (and $\theta\approx 0$, $\omega\approx 0$) without violating $T\in[T_{\min},T_{\max}]$, gimbal limits, glide-slope / keep-out, and remaining propellant.</p>
+<p>Apollo used polynomial / E-guidance: assume an acceleration profile, solve the two-point boundary value problem in closed form. That is fast and does not natively respect a <em>lower</em> bound on thrust. The modern convex-guidance lineage does.</p>
+<p>The papers to actually read — these are real, and I checked the citations — are the JPL / Caltech powered-descent sequence:</p>
+<ol>
+<li>Behçet Açıkmeşe and Scott R. Ploen, “Convex Programming Approach to Powered Descent Guidance for Mars Landing,” <em>Journal of Guidance, Control, and Dynamics</em>, 30(5):1353–1366, 2007. <a href="https://doi.org/10.2514/1.27553">doi:10.2514/1.27553</a></li>
+<li>Lars Blackmore, Behçet Açıkmeşe, and Daniel P. Scharf, “Minimum-Landing-Error Powered-Descent Guidance for Mars Landing Using Convex Optimization,” <em>JGCD</em>, 33(4):1161–1171, 2010. <a href="https://doi.org/10.2514/1.47202">doi:10.2514/1.47202</a></li>
+<li>Behçet Açıkmeşe and Lars Blackmore, “Lossless convexification of a class of optimal control problems with non-convex control constraints,” <em>Automatica</em>, 47(2):341–347, 2011.</li>
+<li>Behçet Açıkmeşe, John M. Carson III, and Lars Blackmore, “Lossless Convexification of Nonconvex Control Bound and Pointing Constraints of the Soft Landing Optimal Control Problem,” <em>IEEE Transactions on Control Systems Technology</em>, 21(6), 2013. <a href="https://doi.org/10.1109/TCST.2012.2237346">doi:10.1109/TCST.2012.2237346</a></li>
+</ol>
+<p>The same theory was implemented as <strong>G-FOLD</strong> (Guidance for Fuel-Optimal Large Diverts) and flown onboard Masten’s Xombie VTVL rocket at Mojave, including a real-time onboard divert on 20 September 2013 (NASA / JPL ADAPT campaign; see also Scharf et al., “Implementation and Experimental Demonstration of Onboard Powered-Descent Guidance,” <em>JGCD</em>).</p>
+<p><strong>What gets convexified, and why it matters.</strong> The fuel-optimal soft-landing problem is a nasty optimal-control problem for one structural reason: a rocket that cannot throttle to zero has a control set</p>
+<div class="eq">
+$$
+T_{\min} \le \lVert\mathbf{T}\rVert \le T_{\max},
+$$
+</div>
+<p>which is an <em>annulus</em> — nonconvex. Pointing limits (do not tilt past $\theta_{\max}$) carve that annulus further. Nonconvex programs do not come with a guarantee that an interior-point solver will find the global optimum in bounded time, which is a poor property for a flight computer that must produce a burn in the next hundred milliseconds or hit the deck.</p>
+<p>Lossless convexification introduces a slack scalar $\Gamma(t)$ and replaces the annulus with</p>
+<div class="eq">
+$$
+\lVert\mathbf{T}\rVert \le \Gamma, \qquad T_{\min} \le \Gamma \le T_{\max}.
+$$
+</div>
+<p>That is a second-order cone (convex). One then proves that an optimal solution of the relaxed problem saturates $\lVert\mathbf{T}\rVert = \Gamma$, so it was feasible for the original annulus. “Lossless” means the relaxation did not throw away the true optimum. The discretized problem is a second-order cone program (SOCP) and can be solved with deterministic interior-point methods.</p>
+<p>SpaceX has not published the Falcon 9 landing guidance. What is public is personnel and heritage: Lars Blackmore, a co-author on the lossless-convexification papers and a G-FOLD inventor at JPL, was at SpaceX from 2011 to 2018 with responsibility for Falcon 9 entry, descent, and landing (stated on his site and AIAA biographical note). It is honest to say the <em>theory</em> that made onboard convex landing guidance respectable was sitting in the building. It is not honest to say “Falcon 9 flies G-FOLD” or to print a fake block diagram of a proprietary solver. Do not do that in your writeup or your code comments.</p>
+<p>For your sim, a perfectly respectable guidance ladder is: (1) the $h_\star$ suicide-burn switch on the vertical channel, (2) a PD on $x$ that commands $\theta$, (3) later, a tiny SOCP or even a quadratic program on a 3-DoF point-mass with $T_{\min}, T_{\max}$. You will feel the annulus as soon as $T_{\min} > mg$.</p>
+<h3>5.3 Control — make the vehicle do that</h3>
+<ul>
+<li><strong>TVC inner loop.</strong> Gimbal $\delta$ tracks $\theta_{\mathrm{cmd}}$ and damps $\omega$. The User’s Guide notes that first-stage TVC is powered by the high-pressure RP-1 system rather than a separate hydraulic fluid — the same architecture SpaceX cites as eliminating a class of “ran out of hydraulic fluid” failures. (Grid-fin hydraulics are a different circuit; CRS-5 in 2015 depleted <em>that</em> fluid and the booster hit the deck. Later vehicles closed the loop and added capacity.)</li>
+<li><strong>Grid fins.</strong> Aero moments while $q$ is high. They unload the TVC and, more importantly, they steer during the unpowered gap between entry cutoff and landing ignition, when $T = 0$ and TVC is dead. See §6.</li>
+<li><strong>N2 RCS.</strong> The official coast / recovery attitude actuator when aero and TVC are both weak: vacuum after staging, and the last low-$q$ seconds. Roll in particular is an RCS / three-engine-TVC problem; a single center engine through the CM does not roll the vehicle.</li>
+<li><strong>PID vs “more modern.”</strong> A well-scheduled PID (or a nested PD on $\theta$ inside a PD on $x$) will land a 2D rigid rocket. So will LQR on the linearized hover plant, or a full-state MPC that knows about $\delta_{\max}$ and $T_{\min}$. SpaceX’s flight code is not published. For a trainer, implement the nested PD first so you can <em>see</em> the inverted-pendulum poles move, then replace the outer loop with something that respects $T_{\min}$.</li>
+</ul>
+<h2 id="aero">6. Aero and grid fins</h2>
+<p>From entry burn to landing burn the stage is an unpowered (or coasting) reentry vehicle. Mach goes hypersonic → supersonic → transonic → subsonic. Every one of those regimes has a different center of pressure, a different hinge moment on the fins, and a different answer to “can I still steer?”</p>
+<p><strong>Why a grid, not a planar fin.</strong> A grid fin is a lattice of small lifting surfaces in a frame. At high angle of attack and through transonic flow, a planar fin stalls and its hinge moment gets ugly. The lattice keeps generating force because each cell is a short-chord surface; the stack behaves more like a cascade than a wing. Grid fins also fold flat against the tank for ascent (Falcon’s four stow along the interstage) and deploy into the stream for entry. They are draggy compared to a planar fin of the same control power, which on a landing booster is not a defect — you are trying to slow down.</p>
+<p><strong>Why titanium.</strong> Early Full Thrust recoveries used aluminum grid fins. They ablated. Onboard video from those years shows fins glowing and shedding. In June 2017 SpaceX flew larger fins “cast and cut” from a single piece of titanium (Musk’s public description; Spaceflight Now’s contemporary reporting). Titanium takes the reentry heat without a separate TPS, survives indefinitely with little refurbishment, and the larger planform increased control authority — including, Musk said at the time, the ability to land in heavier wind. Slightly heavier than the shielded aluminum parts, and worth it.</p>
+<p>SpaceX’s vehicle page is explicit about the job: the fins “orient the rocket during reentry by moving the center of pressure.” That is the one-sentence aero course.</p>
+<p><strong>Center of pressure vs CM; weathercocking.</strong> A passively stable arrow has $x_{\mathrm{cp}}$ <em>behind</em> the CM (aft of the CM along the velocity vector), so an angle of attack produces a restoring moment. A Falcon first stage flying engines-first has a heavy aft end (engines, octaweb, legs) and a light forward end (empty tanks, interstage, fins). The fins are at the <em>forward</em> end of the first stage — which, engines-first, is the trailing end. They pull $x_{\mathrm{cp}}$ aft of the CM so the stage wants to keep engines into the wind. That is weathercocking, and it is why a booster with a jammed or underpowered fin can enter a spin (CRS-16 is the public example: a grid-fin hydraulic stall, a roll, and a water landing that the vehicle survived).</p>
+<p><strong>What fins can and cannot do vs TVC.</strong></p>
+<table>
+<thead><tr><th></th><th>Grid fins</th><th>TVC</th></tr></thead><tbody>
+<tr><td>Needs atmosphere / $q$</td><td>Yes</td><td>No</td></tr>
+<tr><td>Needs an engine running</td><td>No</td><td>Yes</td></tr>
+<tr><td>Authority as $v\to 0$</td><td>Vanishes</td><td>Full</td></tr>
+<tr><td>Roll (single center engine)</td><td>Yes, if $q$ allows</td><td>Weak / none</td></tr>
+<tr><td>Hypersonic heating</td><td>The fin is the part that cooks</td><td>Engine is already a furnace</td></tr>
+<tr><td>Between entry cutoff and landing ignition</td><td>Primary steering</td><td>Dead</td></tr>
+</tbody>
+</table>
+<p>Your 2D sim can represent fins as a moment $M_{\mathrm{fin}} = q\,S_{\mathrm{ref}}\,c\,\mathrm{C}_{m}(\alpha,\delta_{\mathrm{fin}})$ and a drag term. Even a linear $C_m = C_{m_\alpha}\alpha + C_{m_\delta}\delta_{\mathrm{fin}}$ with a $q$ that goes to zero below a few tens of m/s will teach the right lesson: <strong>do not count on aero in the last second.</strong></p>
+<h2 id="prop">7. Propulsion constraints that shape the landing</h2>
+<p>Merlin 1D is a gas-generator, pintle-injected, LOX/RP-1 engine. The User’s Guide’s description is the one to trust: single-shaft turbopump (LOX pump, fuel pump, and turbine on one shaft), regeneratively cooled chamber and nozzle with a milled copper-alloy liner, pintle injector for combustion stability, sea-level thrust 845 kN, restart capability yes, throttle capability yes. TVC hydraulics are tapped from the high-pressure RP-1 circuit.</p>
+<p><strong>Pintle.</strong> The injector is the same family as the Apollo lunar module descent engine. A pintle is inherently stable against the high-frequency combustion instabilities that have destroyed many engines. That matters more on the ninth restart of a flight-proven booster than it does on a fresh acceptance test.</p>
+<p><strong>Sea-level nozzle on a landing engine.</strong> The first-stage Merlins have a small expansion ratio (public compilations say 16:1; not in the current User’s Guide). They are the right engine to light at the pad <em>and</em> at the barge. A vacuum nozzle would separate and dump side loads into the gimbal at sea level. The landing burn is a sea-level burn. This is why the center engine, not the second-stage MVac, lands the booster.</p>
+<p><strong>Throttle.</strong> Official published band: 190,000 → 108,300 lbf sea level (~57%). Older public ballpark: ~40%. The floor is not zero, and it is not $mg$ of an empty stage. Everything in §4 follows from that.</p>
+<p><strong>Restart, chilldown, TEA-TEB.</strong> Merlin lights with triethylaluminum-triethylborane, a pyrophoric slug. The User’s Guide calls out dual-redundant TEA-TEB igniters on the <em>second-stage</em> MVac “for added reliability of restart.” First-stage landing restarts are obviously also TEA-TEB; SpaceX has not published the first-stage igniter redundancy in that table. Chilldown of the pumps and lines before a relight is real and consumes time and some propellant. A 2D sim that treats $T$ as an instantaneous knob is lying about the thing that makes $h_\star$ a random variable.</p>
+<p><strong>Why 3-to-1.</strong> Observed landing burns often light the center engine plus two opposing outboard engines, then shut the outboards and finish on the center. Three engines give a high $a$ while the vehicle is still heavy and fast — minimum gravity loss, minimum burn time, maximum payload left on the ascent. Near the ground the stage is light; three engines even at minimum throttle are a T/W that would make the suicide-burn timing unforgiving (and the plume a deck-ablation problem). One center engine is the lowest $T$ they can get. Two-engine landings are the awkward middle: two outboards are a couple, not a force through the CM, and handing off from two outboards to the center in a fraction of a second with ignition jitter is a poor idea. The public commentary from people who have actually looked at this (e.g. Russell Borogove’s summary on Space Exploration Stack Exchange) is the right engineering argument; SpaceX has not published a “why not two” memo.</p>
+<p><strong>Engine-out.</strong> Nine engines on ascent are an engine-out system; CRS-1 proved it. On landing you have at most three lit, then one. A landing-burn engine failure is usually a lost booster (March 2020 and February 2021 Starlink missions are public examples of ascent engine-out that then failed recovery). Design the sim so that killing the engine at $T+2$ s on the landing burn is a scenario, not a surprise.</p>
+<p><strong>Ullage / settling.</strong> After minutes of coast, liquid is not where you left it. A restart with the outlet uncovered is a good way to destroy a turbopump. RCS acceleration, a small settling burn, or tank geometry — some combination keeps a liquid head. Your point-mass sim can skip slosh; a “I want this to feel like the vehicle” sim should at least refuse to make thrust if $a_{\mathrm{axial}}$ has been near zero for too long.</p>
+<h2 id="structures">8. Structures and mechanisms</h2>
+<p>This is your section. I will talk loads, paths, and free bodies, not reuse slogans.</p>
+<h3>8.1 The airframe you are landing</h3>
+<p>The User’s Guide and the vehicle page agree on the architecture. First-stage tanks are aluminum-lithium, friction-stir welded. The LOX tank is monocoque; the RP-1 tank is skin-and-stringer. A common dome separates them. A double-wall transfer tube carries LOX down through the center of the RP-1 tank to the engines — so the engine section sees a LOX line, an RP-1 outlet, pressurant lines, and nine thrust structures, not a simple closed dome. Tank pressurization is heated helium.</p>
+<p>The interstage is a composite (aluminum honeycomb core, carbon-fiber facesheets) fixed to the forward end of the first-stage tank. It carries the pneumatic separation hardware and, on a recoverable core, the four grid-fin actuators. It is also the part of the booster that is trailing in the entry plasma.</p>
+<p>Nine Merlins sit in an octaweb: eight around a center. Each engine is in its own metal bay (User’s Guide: isolation in the event of a destructive engine failure). Thrust from the center engine on landing is a nearly pure compressive load into the octaweb and up the tank wall. Thrust from a gimbaled engine is compression plus a side load and a moment. During a three-engine landing burn the aft bay is seeing something closer to an off-nominal ascent load than to a gentle set-down.</p>
+<h3>8.2 Legs</h3>
+<p>Four legs, carbon fiber over aluminum honeycomb, stowed along the base, deployed symmetrically a few seconds before touchdown. Deployment is pneumatic, driven by high-pressure helium (public description from SpaceX / Musk at the time the legs debuted on CRS-3; nested telescoping pistons, because the actuator has to be very light when extended). They latch. They are not actively servoed after lock — they are a mechanism, not a landing-gear oleo in the aircraft sense.</p>
+<p>Energy absorption is staged:</p>
+<ol>
+<li>The structure of the leg itself (composite, some elasticity).</li>
+<li>A replaceable <strong>aluminum-honeycomb crush core</strong> — a fuse. Musk has referred to it in public as the “emergency crush core” after hard landings. Honeycomb crushes at a roughly flat load-stroke curve, which is what you want: cap the load into the octaweb, dissipate $\tfrac12 m v^2$, and throw the cartridge away during refurbishment. It does not spring back. Boosters have come into port with one leg visibly shorter than the others; that is a used core, not a bent tank.</li>
+</ol>
+<p>“Soft landing” for this airframe does not mean “zero load.” It means: sink rate low enough that the cores and the octaweb stay inside the linear-or-fuse envelope; lateral rate low enough that the tip-over moment about the first contact pad is resisted by $mg$ acting inside the four-pad polygon; and no bounce that re-lights the inverted pendulum with a short, unknown, crushed leg.</p>
+<h3>8.3 Free-body of a leg at touchdown</h3>
+<p>Sketch this. Vehicle mass $m$ at CM height $h_{\mathrm{cm}}$ above the deck (leg length plus the aft-bay geometry; unofficially on the order of the deployed leg, several meters). Vertical sink rate $v_z$ at first contact. One, two, or four pads taking load, depending on deck slope, roll error, and whether a core has already started to crush.</p>
+<p>Vertical: the pad load $N$ on one leg, plus the crush-core force-stroke $F_c(\Delta)$, plus any remaining thrust $T$ (engine cutoff is not a perfect step). Inertia load $m a_z$ closes the statement. The octaweb attachment sees $N$ as compression and, if the leg is splayed, a shear and a moment $N\cdot d_{\mathrm{offset}}$.</p>
+<p>Lateral: if the CM is not over the four-pad centroid — deck slope $\gamma$, touchdown attitude $\theta$, or a horizontal residual $v_x$ that the first pad stops — the moment about the contact pad is</p>
+<div class="eq">
+$$
+M_{\mathrm{tip}} = mg\cdot x_{\mathrm{cm}} + m\dot v_x\cdot h_{\mathrm{cm}}
+$$
+</div>
+<p>with $x_{\mathrm{cm}} \approx h_{\mathrm{cm}}\theta + x_{\mathrm{pad}}$. The restoring moment from the other legs is available only after they are on the deck. Friction at the pad, $\mu N$, is the only horizontal force until it saturates; then the foot slides and $x_{\mathrm{cm}}$ grows. A wet droneship deck, residual RP-1, or a painted pad after a landing is not $\mu = 0.8$ concrete in a textbook.</p>
+<p>Four legs vs three: a three-pad stool never rocks, but its apothem (center to edge) is smaller, so the CM has less room to be wrong before $M_{\mathrm{tip}}$ exceeds $mg\cdot a_{\mathrm{apothem}}$. Four pads, with crush cores that can take a one-leg-first hit, are a tip-over choice. SpaceX has lost boosters to tip-over after a “successful” touchdown (the August 2024 Starlink landing is a recent public example). The landing is not over when $v_z = 0$.</p>
+<p><strong>Aft-bay loads during the landing burn, before contact.</strong> The center-engine case is clean: $\sim T$ up the thrust structure, plus a gimbal side load $T\sin\delta$ and the moment that side load puts into the octaweb hard points. The three-engine case is that plus two outboard thrust vectors, each of which is a local compression on the ring and a couple if they are not matched. Throttle transients and an outboard shutdown (3-to-1) are step loads. If you were sizing this, you would envelope: max $T$, max $\delta$, engine-out on one outboard, and the shutdown transient, at the lightest and heaviest landing masses, and you would not forget the acoustic / thermal soak from a multi-engine plume on a concrete or steel deck.</p>
+<p><strong>Grid-fin actuators.</strong> Hydraulic, closed-loop after the CRS-5 lesson. Hinge moments peak in the transonic. The interstage carries those moments into the forward skirt. A stalled fin is an aero moment you did not order; the structure will take it, the trajectory may not.</p>
+<h3>8.4 Touchdown conditions worth putting on a one-page spec</h3>
+<p>SpaceX does not publish these. A structural engineer still has to write <em>some</em> numbers on the whiteboard. Order-of-magnitude, not flight rules:</p>
+<ul>
+<li>Sink rate: a walking pace or better — a few m/s or less — is what the webcasts and the surviving cores imply. At 25–30 t, 2 m/s is 50–60 kJ; 4 m/s is four times that, and the cores start to look small.</li>
+<li>Attitude: a few degrees. $h_{\mathrm{cm}}\theta$ has to stay inside the pad polygon.</li>
+<li>Horizontal rate: small compared to $\sqrt{\mu g L}$ where $L$ is the pad half-width; otherwise the feet skate.</li>
+<li>Deck slope / ship list: a droneship is a barge in the Atlantic or Pacific. “Self-leveling” legs were a later Block 5 upgrade after a booster was damaged at sea (public reporting, 2022-era), which is a confession that the deck is not a surface plate.</li>
+</ul>
+<h2 id="fuel">9. Fuel, margins, and the tyranny of the last 30 seconds</h2>
+<p>The rocket equation does not care that you are close to home:</p>
+<div class="eq">
+$$
+\Delta v = I_{\mathrm{sp}}\,g_0\ln\frac{m_0}{m_f}.
+$$
+</div>
+<p>Merlin 1D sea-level $I_{\mathrm{sp}}$ is <strong>not in the current User’s Guide</strong>. Public compilations give about 282 s sea-level and 311 s vacuum. Use ~280 s for a landing-burn back-of-the-envelope and call it unofficial.</p>
+<p>A landing burn that must cancel $V \approx 250\,\mathrm{m/s}$ of sink, plus gravity loss $g t_{\mathrm{burn}}$, plus a horizontal divert, is a $\Delta v$ of several hundred m/s. At 282 s, $c = I_{\mathrm{sp}}g_0 \approx 2{,}770\,\mathrm{m/s}$, so</p>
+<div class="eq">
+$$
+\frac{m_0}{m_f} = e^{\Delta v/c} \approx e^{0.11} \approx 1.12
+$$
+</div>
+<p>for a 300 m/s burn — about 12% of the <em>landing</em> mass in propellant. On a 28 t wet-at-ignition stage that is a few tonnes. It does not sound like much against 395 t of unofficial ascent propellant load, until you remember that those tonnes are the <em>last</em> tonnes: they rode all the way up, all the way through boostback and entry, and they are the reserve you will not have if the entry burn ran long.</p>
+<p><strong>Residual propellant is both reserve and penalty.</strong> Every extra kilogram of LOX/RP-1 you keep “just in case” is a kilogram you accelerated to MECO and then decelerated three times. It is also the only thing between a gust in the last two seconds and a hard deck. The right residual is a reliability number, not a performance number, and it is why “fuel is time” on a suicide burn: a 10% low estimate of $V$ at ignition is a 21% error in $h_\star$, which you can only fix by having throttle margin <em>and</em> propellant margin. Merlin’s throttle floor eats the first of those.</p>
+<p><strong>ASDS vs RTLS.</strong> RTLS pays a large boostback $\Delta v$ to reverse the downrange component. That propellant is not available for ascent, so RTLS is a payload tax — SpaceX’s own payload table on the vehicle page is the expended-performance number; reused / RTLS performance is lower and not fully published there. ASDS trades ship operations for that $\Delta v$. No-boostback ASDS is the cheapest recovery in propellant and the most expensive in downrange logistics. The “tyranny” is that the last 30 seconds cannot borrow from the boostback account; that propellant is already gone.</p>
+<p><strong>Fuel is time.</strong> Differentiate $h_\star$: at fixed $a$,</p>
+<div class="eq">
+$$
+\mathrm{d}h_\star = \frac{V}{a-g}\,\mathrm{d}V.
+$$
+</div>
+<p>Every extra 10 m/s of residual speed at the handoff from the fins is tens of meters of ignition altitude and a fraction of a second of burn. The engine consumes $T/(I_{\mathrm{sp}}g_0)$ — unofficially, a Merlin at high throttle is on the order of 0.3 t/s (845 kN / (282 s * g0)). A one-second argument with the vertical channel is a visible dent in the reserve. That is the feeling you want in the sim: not a fuel gauge that slowly empties, but a clock.</p>
+<h2 id="sim">10. What a 2D sim gets right, and what it lies about</h2>
+<p>Build the planar rigid body in §3. Close a nested loop on $\delta$ and a suicide-burn switch on $T$. You now own the problem that actually lands the rocket. Everything else is clothing.</p>
+<p><strong>What the trainer gets right</strong></p>
+<ul>
+<li>The inverted-pendulum poles and the need to put $T$ under the CM.</li>
+<li>Gimbal as a coupled translator-and-rotator, not a pure torque.</li>
+<li>$T_{\min} > mg$ and the existence of $h_\star$.</li>
+<li>The attitude command $\hat e_T \parallel \mathbf{a}_{\mathrm{cmd}}+g\hat z$.</li>
+<li>Why a late light or a stuck-high throttle is unsurvivable.</li>
+<li>A first lesson in “fuel is time.”</li>
+</ul>
+<p><strong>What it lies about — and when to add each lie back</strong></p>
+<table>
+<thead><tr><th>Lie</th><th>What the real vehicle does</th><th>When to add it</th></tr></thead><tbody>
+<tr><td>No roll / yaw</td><td>3-D attitude; a single center engine cannot roll; fins and RCS must</td><td>After planar landings are boring</td></tr>
+<tr><td>No aero</td><td>$q$-dependent CP, transonic hinge moments, weathercocking</td><td>When you want a coast phase that is not a straight line</td></tr>
+<tr><td>No slosh</td><td>LOX and RP-1 are free surfaces; they move the CM and slosh against sensors</td><td>When your TVC loop looks too clean</td></tr>
+<tr><td>Rigid</td><td>Tank modes, engine-frame elasticity, fin flutter / stall</td><td>When you start talking loads, not just trajectories</td></tr>
+<tr><td>No wind</td><td>Shear and gusts on a 40 m tube; ship motion on ASDS</td><td>When your CEP is a point</td></tr>
+<tr><td>Instant engine</td><td>Chilldown, TEA-TEB, $T(t)$ rise, 3-to-1 shutdown transient</td><td>Before you trust $h_\star$</td></tr>
+<tr><td>Perfect state</td><td>IMU bias, GPS dropout, radar over a deck, plume ionization</td><td>When guidance is “too good”</td></tr>
+<tr><td>Fixed pad</td><td>ASDS heave, surge, and yaw; Octagrabber after the fact</td><td>If you ever model the ship</td></tr>
+<tr><td>Point mass of fuel</td><td>Residuals, mixture-ratio trim, helium pressurant mass</td><td>When you close the rocket equation honestly</td></tr>
+</tbody>
+</table>
+<p>Map onto the trainer in this order. (1) Rigid planar 7-state, instantaneous $T$ and $\delta$, suicide-burn + PD. (2) Delay and $T_{\min}$. (3) A drag / $C_m$ aero term that dies with $q$. (4) Noise on $x,z$. (5) Only then a third dimension or a flexible mode. If you add slosh before the broomstick poles are visible, you will tune slosh and miss the plant.</p>
+<p>A Falcon 9 landing is not magic and it is not a PID meme. It is a rigid body with the mass on the wrong end of the stick, an engine that cannot whisper, a set of fins that work until they don’t, and a guidance problem whose convexification is one of the cleaner pieces of applied optimal control of the last twenty years. Your sim only has to tell that story in a plane. If it does, you will feel — in the gain that just barely holds a 1.3 s unstable pole, and in the ignition altitude that cannot be a guess — why the last thirty seconds are the job.</p>
+<h2 id="sources">Sources</h2>
+<p>Primary and primary-ish, actually used:</p>
+<ul>
+<li><a href="https://www.spacex.com/vehicles/falcon-9">SpaceX Falcon 9 vehicle page</a> — height, diameter, mass, payload, Merlin SL 845 kN, MVac 981 kN, grid-fin job (“moving the center of pressure”), interstage description. Retrieved 2026-08-19.</li>
+<li><a href="https://www.spacex.com/assets/media/falcon-users-guide-2025-05-09.pdf">SpaceX Falcon User’s Guide, Rev. 8, 2025-03</a> (file dated 9 May 2025) — tank architecture, common dome, LOX transfer tube, octaweb, throttle band 190,000–108,300 lbf SL, restart, TVC-from-RP-1, GN2 ACS, GPS + IMU, three-string avionics, pneumatic separation, four fins / four legs, hold-down, AFTS.</li>
+<li><a href="https://www.faa.gov/media/91711">FAA Draft EA, Falcon 9 operations at SLC-40</a> — public description of entry burn (velocity and descent angle) and landing burn (slow to zero at the LZ).</li>
+<li>Açıkmeşe & Ploen, <em>JGCD</em> 30(5), 2007, <a href="https://doi.org/10.2514/1.27553">doi:10.2514/1.27553</a>.</li>
+<li>Blackmore, Açıkmeşe & Scharf, <em>JGCD</em> 33(4), 2010, <a href="https://doi.org/10.2514/1.47202">doi:10.2514/1.47202</a>.</li>
+<li>Açıkmeşe & Blackmore, <em>Automatica</em> 47(2), 2011.</li>
+<li>Açıkmeşe, Carson & Blackmore, <em>IEEE TCST</em> 21(6), 2013, <a href="https://doi.org/10.1109/TCST.2012.2237346">doi:10.1109/TCST.2012.2237346</a>.</li>
+<li><a href="http://larsblackmore.com/losslessconvexification.htm">Lars Blackmore, lossless convexification note</a> and <a href="http://www.larsjamesblackmore.com/">bio</a> — G-FOLD / Xombie; F9 EDL responsibility 2011–2018.</li>
+<li><a href="https://www.nasa.gov/centers-and-facilities/armstrong/mastens-xombie-tests-jpls-g-fold-precision-landing-software/">NASA: Masten Xombie / G-FOLD, 20 Sep 2013</a>.</li>
+<li>Scharf et al., “Implementation and Experimental Demonstration of Onboard Powered-Descent Guidance,” <em>JGCD</em> (G-FOLD flight tests).</li>
+<li>Spaceflight Now contemporaneous timelines (e.g. <a href="https://spaceflightnow.com/2020/06/03/timeline-for-falcon-9-launch-with-starlink-satellites/">Starlink, 3 Jun 2020</a>, <a href="https://spaceflightnow.com/2017/05/31/timeline-of-spacexs-35th-falcon-9-launch/">CRS / LZ-1 era</a>) and <a href="https://spaceflightnow.com/2017/06/25/falcon-9-rocket-launching-sunday-sports-fin-upgrade/">titanium grid fins, 25 Jun 2017</a>.</li>
+<li><a href="https://en.wikipedia.org/wiki/Falcon_9">Wikipedia: Falcon 9</a> and <a href="https://en.wikipedia.org/wiki/Merlin_(rocket_engine">Merlin</a>) — unofficial mass, Isp, chamber pressure, landing-leg materials; used only where SpaceX is silent, and labeled so.</li>
+<li>Public Musk comments: titanium fins (Jun 2017 tweets), ~40% throttle (2016), emergency crush core, TEA-TEB / Merlin architecture via long-running public record.</li>
+<li>Space Exploration Stack Exchange (Borogove and others) on 3-to-1 vs 2-engine landings and landing T/W — engineering argument, not a primary spec.</li>
+</ul>
+<p>Numbers I treated as <strong>verified / official</strong>: 70 m / 3.66 m / 549,054 kg vehicle; 22,800 kg LEO expended; 845 kN and 190,000–108,300 lbf throttle; 981 kN MVac; LOX/RP-1 gas-generator pintle; Al-Li common-dome tanks; four fins, four legs; GN2 RCS; GPS+IMU; pneumatic sep; TVC from RP-1.</p>
+<p>Numbers I treated as <strong>unofficial or approximate</strong>: 25,600 kg stage dry mass; ~396 t stage propellant; 282/311 s Isp; 9.7 MPa chamber pressure; ~470 kg engine mass; ~40% throttle (older public); MECO altitude/speed; burn durations and entry/landing altitudes; touchdown sink rate; landing CEP; CM height $\ell$; terminal velocity in the aero phase.</p>
+<footer>Night notebook, not a marketing page. Math via KaTeX. Diagrams via mermaid. Open TUTORIAL.md for the portable copy.</footer>
+</main>
+</div>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.15.0/mermaid.min.js"></script>
+<script src="render.js" defer="defer"></script>
+</body>
+</html>
